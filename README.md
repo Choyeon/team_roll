@@ -101,6 +101,21 @@ location /ws/ {
 
 健康检查：`GET /healthz`（数据库不可用时返回 503）。
 
+### choyeon 服务器（choyeon-panel 纳管）
+
+站点 <https://roll.choyeon.cc>，面板应用 `team-roll`（id 47，端口 8803）：
+
+```bash
+choyeonctl app deploy --id 47     # 拉 main 并重装依赖，随后重启 panel-team-roll.service
+systemctl restart panel-team-roll
+choyeonctl app logs --id 47
+```
+
+- 代码在 `/root/www/team_roll`，数据库在 `/var/lib/team_roll/team_roll.db`（刻意放在代码目录外，`git reset --hard` 碰不到）。
+- 生产参数写在 `/root/www/team_roll/.panel.env`（0600，unit 以 `EnvironmentFile` 读取），首启建管理员用的 `BOOTSTRAP_ADMIN_*` 已在建号后删除。
+- nginx 配置由面板生成在 `/etc/nginx/conf.d/panel-team-roll.conf`（已含 `Upgrade`/`Connection` 转发），证书由 certbot 装在同一文件；若重新 `choyeonctl app create` 会覆盖该文件，需要重跑 `certbot --nginx -d roll.choyeon.cc`。
+- 面板的备份任务目前只覆盖 rosetta 的 PG，`/var/lib/team_roll` 还没进自动备份，需要另建 SQLite 备份任务。
+
 ## API 摘要
 
 公开：`GET /api/v1/activities`（分页·搜索·状态）、`GET /api/v1/activities/{id}`、`GET /api/v1/activities/{id}/rolls`、`GET /api/v1/activities/{id}/stats`、`POST /api/v1/activities/{id}/rolls`（参与 Roll 点）。
