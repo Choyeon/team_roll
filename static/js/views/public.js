@@ -6,9 +6,9 @@ import { navigate, params as routeParams } from "../lib/router.js";
 import { STATUS_LABEL, dateTime, number, percent } from "../lib/format.js";
 import { openActivitySocket } from "../lib/ws.js";
 import { computed, defineComponent, onBeforeUnmount, onMounted, ref, watch } from "../lib/vue.js";
+import { NumberReel } from "../components/reel.js";
 import { Busy, EmptyState, Pager, StatusPill } from "../components/ui.js";
 
-const SPIN_MS = 900;
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function sortRolls(list) {
@@ -159,7 +159,7 @@ export const HomeView = defineComponent({
 
 export const ActivityView = defineComponent({
   name: "ActivityView",
-  components: { Busy, StatusPill },
+  components: { Busy, NumberReel, StatusPill },
   setup() {
     const activity = ref(null);
     const rolls = ref([]);
@@ -167,14 +167,16 @@ export const ActivityView = defineComponent({
     const missing = ref(false);
     const name = ref(localStorage.getItem("team-roll-name") || "");
     const busy = ref(false);
-    const spinning = ref(false);
+    const rolling = ref(false);
+    const reeling = ref(false);
+    const rollSeq = ref(0);
+    const reelTarget = ref("");
     const display = ref("");
     const mine = ref(null);
     const fresh = ref("");
     const socketStatus = ref("connecting");
     const connections = ref(0);
     let socket = null;
-    let spinTimer = null;
 
     const id = computed(() => routeParams.value.activity_id);
     const range = computed(() => {
@@ -182,9 +184,12 @@ export const ActivityView = defineComponent({
       const size = activity.value.roll_max - activity.value.roll_min + 1;
       return { size, filled: activity.value.roll_count, ratio: size ? activity.value.roll_count / size : 0 };
     });
-    const canRoll = computed(
-      () => activity.value && activity.value.status === "active" && !busy.value && !spinning.value,
-    );
+    const reelDigits = computed(() => (activity.value ? String(activity.value.roll_max).length : 2));
+    const displayState = computed(() => {
+      if (rolling.value) return "spinning";
+      return display.value || reelTarget.value ? "revealed" : "idle";
+    });
+    const canRoll = computed(() => activity.value && activity.value.status === "active" && !busy.value && !rolling.value);
     const blockReason = computed(() => {
       if (!activity.value) return "";
       if (activity.value.status === "ended") return "活动已结束，榜单保持最终状态。";
@@ -200,6 +205,17 @@ export const ActivityView = defineComponent({
       setTimeout(() => {
         if (fresh.value === result.id) fresh.value = "";
       }, 1800);
+    }
+
+    // 自己这一枪先压住，等滚轮停稳再上榜，免得榜单提前剧透数字。
+    let pending = null;
+
+    function commitPending() {
+      if (!pending) return;
+      const result = pending;
+      pending = null;
+      applyRoll(result);
+      resyncTotals();
     }
 
     function resyncTotals() {
@@ -220,8 +236,10 @@ export const ActivityView = defineComponent({
           connections.value = frame.connections;
           break;
         case "roll_result":
-          applyRoll(frame.result);
-          resyncTotals();
+          if (!pending || frame.result.id !== pending.id) {
+            applyRoll(frame.result);
+            resyncTotals();
+          }
           break;
         case "roll_updated":
           if (frame.result.status === "valid") applyRoll(frame.result);
@@ -260,19 +278,6 @@ export const ActivityView = defineComponent({
       }
     }
 
-    function spin() {
-      if (reducedMotion) return;
-      const { roll_min: min, roll_max: max } = activity.value;
-      spinning.value = true;
-      const started = performance.now();
-      const tick = () => {
-        display.value = String(Math.floor(min + Math.random() * (max - min + 1)));
-        if (performance.now() - started < SPIN_MS) spinTimer = requestAnimationFrame(tick);
-        else spinning.value = false;
-      };
-      spinTimer = requestAnimationFrame(tick);
-    }
-
     async function rollTheDice() {
       const trimmed = name.value.trim();
       if (!trimmed) {
@@ -282,23 +287,38 @@ export const ActivityView = defineComponent({
       localStorage.setItem("team-roll-name", trimmed);
       busy.value = true;
       mine.value = null;
-      const min = activity.value.roll_min;
-      const max = activity.value.roll_max;
-      spin();
+      display.value = "";
+      reelTarget.value = "";
+      if (!reducedMotion) {
+        // 每次开一轮新的滚轮：:key 变更会重挂载组件并从自由转动开始。
+        rollSeq.value += 1;
+        reeling.value = true;
+        rolling.value = true;
+      }
       try {
         const data = await api.post(`/activities/${id.value}/rolls`, { name: trimmed });
         mine.value = data.roll;
-        applyRoll(data.roll);
         activity.value = { ...activity.value, ...data.activity };
         display.value = String(data.roll.number);
+        if (reeling.value) {
+          pending = data.roll;
+          reelTarget.value = display.value.padStart(reelDigits.value, "0");
+        } else {
+          applyRoll(data.roll);
+        }
       } catch (err) {
-        display.value = "";
+        reeling.value = false;
+        rolling.value = false;
         notify(err.message, "error", 6000);
       } finally {
-        cancelAnimationFrame(spinTimer);
-        spinning.value = false;
         busy.value = false;
+        if (!reeling.value) rolling.value = false;
       }
+    }
+
+    function onLanded() {
+      rolling.value = false;
+      commitPending();
     }
 
     function connect() {
@@ -319,19 +339,23 @@ export const ActivityView = defineComponent({
 
     onBeforeUnmount(() => {
       socket?.close();
-      cancelAnimationFrame(spinTimer);
     });
 
     watch(id, () => {
       display.value = "";
       mine.value = null;
+      reeling.value = false;
+      rolling.value = false;
+      reelTarget.value = "";
+      pending = null;
       load();
       connect();
     });
 
     return {
-      activity, rolls, loading, missing, name, busy, spinning, display, mine, fresh,
-      socketStatus, connections, range, canRoll, blockReason, load, rollTheDice,
+      activity, rolls, loading, missing, name, busy, rolling, reeling, rollSeq, reelTarget,
+      display, mine, fresh, socketStatus, connections, range, reelDigits, displayState,
+      canRoll, blockReason, load, rollTheDice, onLanded,
       STATUS_LABEL, dateTime, number, percent,
     };
   },
@@ -365,9 +389,14 @@ export const ActivityView = defineComponent({
 
         <div class="roll-hero">
           <section class="card rollbox" aria-label="Roll 点">
-            <div class="rollbox__display" :data-state="spinning ? 'spinning' : (display ? 'revealed' : 'idle')"
-                 aria-live="polite" aria-atomic="true">{{ display || (activity.roll_min + '-' + activity.roll_max) }}</div>
-            <p class="rollbox__range" v-if="mine">{{ mine.name }} 的数值是 {{ number(mine.number) }}，当前排名第 {{ mine.rank }}</p>
+            <div class="rollbox__display" :data-state="displayState" aria-live="polite" aria-atomic="true">
+              <NumberReel v-if="reeling" :key="rollSeq" :digits="reelDigits" :target="reelTarget"
+                          :label="display" @landed="onLanded"/>
+              <template v-else>{{ display || (activity.roll_min + '-' + activity.roll_max) }}</template>
+            </div>
+            <p class="rollbox__range" v-if="mine && !rolling">
+              {{ mine.name }} 的数值是 {{ number(mine.number) }}，当前排名第 {{ mine.rank }}
+            </p>
             <label class="field" style="width:100%">
               <span class="field__label">你的名字</span>
               <input id="player-name" class="input" v-model="name" maxlength="32" autocomplete="nickname"
@@ -375,7 +404,7 @@ export const ActivityView = defineComponent({
             </label>
             <button class="btn btn--primary btn--roll" type="button" :disabled="!canRoll" @click="rollTheDice">
               <span v-if="busy" class="spinner" aria-hidden="true"></span>
-              {{ busy ? 'Roll 中…' : (display ? '再 Roll 一次' : '开始 Roll 点') }}
+              {{ busy ? 'Roll 中…' : (rolling ? '开奖中…' : (display ? '再 Roll 一次' : '开始 Roll 点')) }}
             </button>
             <div class="row" style="justify-content:center;font-size:var(--text-xs)">
               <span class="presence">
