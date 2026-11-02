@@ -146,6 +146,7 @@ export const HomeView = defineComponent({
             <li>剩余 {{ number(activity.remaining_numbers) }}</li>
             <li>最高 {{ activity.top_number === null ? '—' : number(activity.top_number) }}</li>
             <li>每人 {{ activity.max_participations }} 次</li>
+            <li v-if="activity.max_participants">限 {{ number(activity.max_participants) }} 人</li>
           </ul>
           <div class="bar" role="img" :aria-label="'完成度 ' + percent(ratio(activity))">
             <div class="bar__fill" :style="{ width: percent(ratio(activity)) }"></div>
@@ -190,11 +191,17 @@ export const ActivityView = defineComponent({
       return display.value || reelTarget.value ? "revealed" : "idle";
     });
     const canRoll = computed(() => activity.value && activity.value.status === "active" && !busy.value && !rolling.value);
+    const slotsFull = computed(
+      () => activity.value && activity.value.max_participants > 0
+        && activity.value.participants >= activity.value.max_participants,
+    );
     const blockReason = computed(() => {
       if (!activity.value) return "";
       if (activity.value.status === "ended") return "活动已结束，榜单保持最终状态。";
       if (activity.value.status === "paused") return "活动已暂停，稍后再来试试。";
       if (range.value.filled >= range.value.size) return "所有数值已被 Roll 完，等待管理员作废或调整区间。";
+      // 名额满只挡住新名字，已上榜的人还能用完自己的次数，所以按钮保持可点。
+      if (slotsFull.value) return `参与名额 ${activity.value.max_participants} 人已满，只有榜上的队友还能继续 Roll。`;
       return "";
     });
 
@@ -223,6 +230,7 @@ export const ActivityView = defineComponent({
       activity.value = {
         ...activity.value,
         roll_count: rolls.value.length,
+        participants: new Set(rolls.value.map((roll) => roll.name)).size,
         remaining_numbers: Math.max(0, range.value.size - rolls.value.length),
         top_number: rolls.value.length ? rolls.value[0].number : null,
       };
@@ -377,6 +385,7 @@ export const ActivityView = defineComponent({
             </div>
             <p class="muted" style="margin:0">
               区间 {{ number(activity.roll_min) }}-{{ number(activity.roll_max) }} · 每人最多 {{ activity.max_participations }} 次 ·
+              <template v-if="activity.max_participants">限 {{ number(activity.max_participants) }} 人 ·</template>
               创建于 {{ dateTime(activity.created_at) }}
             </p>
           </div>

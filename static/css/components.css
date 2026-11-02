@@ -219,6 +219,12 @@
   border-color: var(--danger);
 }
 
+.field__hint {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
 .field__error {
   color: var(--danger);
   font-size: var(--text-xs);
@@ -404,15 +410,22 @@
 
 /* --- modal & toast --- */
 
+/* The UA sizes <dialog> to fit-content, so it has to be stretched over the
+   viewport by hand before flex can centre the panel on both axes. */
 .modal {
+  align-items: center;
   background: transparent;
   border: 0;
   color: inherit;
-  margin: 0;
-  padding: 0;
-  max-width: none;
-  max-height: none;
+  display: flex;
   height: 100%;
+  inset: 0;
+  justify-content: center;
+  margin: 0;
+  max-height: none;
+  max-width: none;
+  padding: var(--space-4);
+  width: 100%;
 }
 
 .modal::backdrop {
@@ -425,9 +438,23 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  margin: var(--space-6) auto;
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+  max-height: 100%;
   max-width: 34rem;
-  width: calc(100% - var(--space-4));
+  width: 100%;
+}
+
+/* Tall forms scroll inside the panel instead of pushing it past the viewport. */
+.modal__panel .card__body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.modal__panel .card__head,
+.modal__panel .card__foot {
+  flex: none;
 }
 
 .toasts {

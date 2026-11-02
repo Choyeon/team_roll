@@ -4,50 +4,45 @@ import { cycleTheme, initTheme, loadSession, logout, notify, store } from "./lib
 import { navigate, route, start } from "./lib/router.js";
 import { computed, createApp, defineComponent, h } from "./lib/vue.js";
 import { ActivityView, HomeView, LoginView, NotFoundView } from "./views/public.js";
-import { ActivitiesView, DashboardView, RollsView } from "./views/admin_core.js";
+import {
+  ADMIN_SECTIONS,
+  ActivitiesView,
+  ActivityFormView,
+  AdminNav,
+  DashboardView,
+  RollsView,
+  allowed,
+} from "./views/admin_core.js";
 import { AdminsView, AuditView, ExportView, SessionsView, SystemView } from "./views/admin_manage.js";
 import { Toasts } from "./components/ui.js";
 
-const SECTIONS = [
-  { key: "dashboard", label: "仪表盘", view: DashboardView, capability: "read" },
-  { key: "activities", label: "活动管理", view: ActivitiesView, capability: "read" },
-  { key: "rolls", label: "Roll 记录", view: RollsView, capability: "read" },
-  { key: "admins", label: "管理员", view: AdminsView, capability: "manage_admins" },
-  { key: "sessions", label: "在线会话", view: SessionsView, capability: "manage" },
-  { key: "audit", label: "审计日志", view: AuditView, capability: "manage" },
-  { key: "export", label: "数据导出", view: ExportView, capability: "manage" },
-  { key: "system", label: "系统状态", view: SystemView, capability: "read" },
-];
-
-function allowed(capability) {
-  return capability === "read" || Boolean(store.me && store.me.capabilities.includes(capability));
-}
+const SECTION_VIEWS = {
+  dashboard: DashboardView,
+  activities: ActivitiesView,
+  rolls: RollsView,
+  admins: AdminsView,
+  sessions: SessionsView,
+  audit: AuditView,
+  export: ExportView,
+  system: SystemView,
+};
 
 const AdminShellView = defineComponent({
   name: "AdminShellView",
   setup() {
-    const sections = computed(() => SECTIONS.filter((item) => allowed(item.capability)));
     const active = computed(() => {
       const key = route.value?.params.section || "dashboard";
-      const found = SECTIONS.find((item) => item.key === key);
+      const found = ADMIN_SECTIONS.find((item) => item.key === key);
       return found && allowed(found.capability) ? found : null;
     });
-    return { sections, active };
+    return { active };
   },
   render() {
     if (!this.active) return h(NotFoundView);
-    const links = this.sections.map((item) =>
-      h(
-        "a",
-        {
-          href: item.key === "dashboard" ? "/admin" : `/admin/${item.key}`,
-          "data-link": "",
-          "aria-current": this.active.key === item.key ? "page" : undefined,
-        },
-        item.label,
-      ),
-    );
-    return h("div", { class: "admin" }, [h("nav", { class: "admin__nav", "aria-label": "管理后台导航" }, links), h(this.active.view)]);
+    return h("div", { class: "admin" }, [
+      h(AdminNav, { active: this.active.key }),
+      h(SECTION_VIEWS[this.active.key]),
+    ]);
   },
 });
 
@@ -101,6 +96,13 @@ const ROUTES = [
   { name: "home", path: "/", view: HomeView, title: "Team Roll - 团队 Roll 点工具" },
   { name: "activity", path: "/activity/:activity_id", view: ActivityView, title: "Roll 点活动 | Team Roll" },
   { name: "login", path: "/login", view: LoginView, title: "管理员登录 | Team Roll" },
+  { name: "activity-new", path: "/admin/activities/new", view: ActivityFormView, title: "新建活动 | 管理后台" },
+  {
+    name: "activity-edit",
+    path: "/admin/activities/:activity_id/edit",
+    view: ActivityFormView,
+    title: "编辑活动 | 管理后台",
+  },
   { name: "admin", path: "/admin/:section?", view: AdminShellView, title: "管理后台 | Team Roll" },
 ];
 

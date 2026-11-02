@@ -5,9 +5,9 @@ FastAPI 提供 JSON API 与 WebSocket 实时通道，前端是无需构建步骤
 
 ## 功能
 
-- **Roll 点**：区间内去重发号（并发冲突自动重试）、每人参与上限、作废后号码重新开放、按数值/时间/名字排序的实时排行榜。
+- **Roll 点**：区间内去重发号（并发冲突自动重试）、每人参与上限、限定参与人数（满员后只有已上榜的名字还能继续 Roll，作废某人的全部记录即释放其名额）、作废后号码重新开放、按数值/时间/名字排序的实时排行榜。
 - **实时同步**：`/ws/{activity_id}` 推送 `hello`/`roll_result`/`roll_updated`/`roll_deleted`/`activity_*` 帧，附带在线人数。
-- **管理后台**：仪表盘（KPI、趋势折线、状态分布、活动 Top、最近记录与审计）、活动创建/规则调整/暂停/结束/重开/删除、按记录 ID 作废·恢复·改名·改数值·删除·补录、多管理员与角色、在线会话强制下线、审计日志、CSV/JSON 导出、系统状态。
+- **管理后台**：仪表盘（KPI、趋势折线、状态分布、活动 Top、最近记录与审计）、活动创建/编辑（独立表单页 `/admin/activities/new`、`/admin/activities/{id}/edit`）、规则调整/暂停/结束/重开/删除、按记录 ID 作废·恢复·改名·改数值·删除·补录、多管理员与角色、在线会话强制下线、审计日志、CSV/JSON 导出、系统状态。
 - **安全**：pbkdf2_sha256 加盐口令、登录失败锁定、滑动窗口限流、HttpOnly 会话 Cookie + CSRF 双重提交、按能力的 RBAC（`read`/`manage`/`manage_admins`/`dangerous`）、每请求 CSP。
 - **SEO/GEO**：按路由注入 title/description/canonical/OG/Twitter 与 JSON-LD，`sitemap.xml`、`robots.txt`，后台与未知路径 `noindex`。
 

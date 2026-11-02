@@ -96,7 +96,8 @@ def activities_csv(db: Session) -> Iterator[str]:
     buffer, writer, prefix = _start_row_stream(
         [
             "id", "name", "description", "status", "roll_min", "roll_max", "max_participations",
-            "valid_rolls", "void_rolls", "participants", "created_at_utc", "started_at_utc", "ended_at_utc",
+            "max_participants", "valid_rolls", "void_rolls", "participants",
+            "created_at_utc", "started_at_utc", "ended_at_utc",
         ]
     )
     yield prefix
@@ -123,6 +124,7 @@ def activities_csv(db: Session) -> Iterator[str]:
                 activity.roll_min,
                 activity.roll_max,
                 activity.max_participations,
+                activity.max_participants,
                 int(valid or 0),
                 int(void or 0),
                 int(people or 0),
@@ -169,6 +171,7 @@ def snapshot_json(db: Session) -> str:
                 "roll_min": activity.roll_min,
                 "roll_max": activity.roll_max,
                 "max_participations": activity.max_participations,
+                "max_participants": activity.max_participants,
                 "created_at": activity.created_at.isoformat(),
                 "rolls": [
                     {

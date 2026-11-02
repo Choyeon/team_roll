@@ -3,15 +3,17 @@
 Invariants enforced here:
   * a number may be held by at most one *valid* result per activity,
   * ``max_participations`` caps how many valid results one name may hold,
+  * ``max_participants`` caps how many distinct names may join (0 = unlimited),
   * voiding a result releases its number so it can be rolled again.
 """
 
 from __future__ import annotations
 
 import secrets
+import threading
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -25,6 +27,14 @@ from app.services import audit
 
 NUMBER_RETRIES = 4
 ORDER_FIELDS = {"number": RollResult.number, "time": RollResult.timestamp, "name": RollResult.name}
+
+_submit_locks: dict[str, threading.Lock] = {}
+_submit_locks_guard = threading.Lock()
+
+
+def _submit_lock(activity_id: str) -> threading.Lock:
+    with _submit_locks_guard:
+        return _submit_locks.setdefault(activity_id, threading.Lock())
 
 
 def pick_free_number(roll_min: int, roll_max: int, used: set[int]) -> int | None:
@@ -121,10 +131,43 @@ def _assert_participation_quota(db: Session, activity: Activity, name: str) -> N
         raise Conflict(f"每人最多参与 {activity.max_participations} 次，你已参与 {held} 次")
 
 
+def _participant_names(db: Session, activity_id: str) -> set[str]:
+    rows = db.execute(
+        select(distinct(RollResult.name)).where(
+            RollResult.activity_id == activity_id, RollResult.status == RollStatus.VALID
+        )
+    ).scalars()
+    return set(rows)
+
+
+def _assert_participant_slots(db: Session, activity: Activity, name: str) -> None:
+    """A capped activity stays open to the people already on the board."""
+    if activity.max_participants <= 0:
+        return
+    joined = _participant_names(db, activity.id)
+    if name in joined:
+        return
+    if len(joined) >= activity.max_participants:
+        raise Conflict(f"本次活动仅限 {activity.max_participants} 人参与，名额已满")
+
+
 def submit(db: Session, activity: Activity, name: str, ip: str) -> tuple[RollResult, int]:
+    """Serialise submits per activity.
+
+    Number uniqueness has a partial unique index to fall back on; the
+    participant cap is a count over other people's rows, so two teammates
+    clicking at the same instant could otherwise both pass the check and take
+    the last slot. The deployment is single-worker, so a process lock is enough.
+    """
+    with _submit_lock(activity.id):
+        return _submit(db, activity, name, ip)
+
+
+def _submit(db: Session, activity: Activity, name: str, ip: str) -> tuple[RollResult, int]:
     """Allocate a fresh number for ``name``; retried on concurrent number collisions."""
     _assert_rollable(activity)
     _assert_participation_quota(db, activity, name)
+    _assert_participant_slots(db, activity, name)
 
     used = {roll.number for roll in activity_rolls(db, activity.id, status=RollStatus.VALID, order="number")}
     for _ in range(NUMBER_RETRIES):
@@ -148,6 +191,7 @@ def submit(db: Session, activity: Activity, name: str, ip: str) -> tuple[RollRes
             # Another participant took this number first: exclude it and draw again.
             used.add(number)
             _assert_participation_quota(db, activity, name)
+            _assert_participant_slots(db, activity, name)
             continue
         db.refresh(roll)
         ranking = activity_rolls(db, activity.id, status=RollStatus.VALID, order="number")

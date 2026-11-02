@@ -15,6 +15,7 @@ class ActivityInput(BaseModel):
     roll_min: int = Field(default=1, ge=0, le=1_000_000)
     roll_max: int = Field(default=100, ge=1, le=1_000_000)
     max_participations: int = Field(default=1, ge=1, le=20)
+    max_participants: int = Field(default=0, ge=0, le=1000)
 
     @model_validator(mode="after")
     def _check_range(self) -> ActivityInput:
@@ -37,6 +38,7 @@ class ActivityUpdate(BaseModel):
     roll_min: int | None = Field(default=None, ge=0, le=1_000_000)
     roll_max: int | None = Field(default=None, ge=1, le=1_000_000)
     max_participations: int | None = Field(default=None, ge=1, le=20)
+    max_participants: int | None = Field(default=None, ge=0, le=1000)
 
     @model_validator(mode="after")
     def _strip(self) -> ActivityUpdate:
@@ -61,6 +63,7 @@ class ActivityPublic(BaseModel):
     roll_min: int
     roll_max: int
     max_participations: int
+    max_participants: int = 0
     created_at: datetime
     started_at: datetime | None = None
     ended_at: datetime | None = None

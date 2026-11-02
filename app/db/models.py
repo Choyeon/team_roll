@@ -92,6 +92,8 @@ class Activity(Base):
     roll_min: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     roll_max: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
     max_participations: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    # Distinct participant names allowed; 0 means unlimited.
+    max_participants: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now, onupdate=utc_now, nullable=False)

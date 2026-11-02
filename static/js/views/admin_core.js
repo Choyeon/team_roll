@@ -18,8 +18,46 @@ import { AppModal, Busy, ConfirmDialog, EmptyState, Pager, StatusPill } from "..
 
 const STATUS_COLORS = { active: "var(--success)", paused: "var(--warning)", ended: "var(--danger)" };
 
+/** The admin navigation table, shared by the shell and the standalone form pages. */
+export const ADMIN_SECTIONS = [
+  { key: "dashboard", label: "仪表盘", capability: "read" },
+  { key: "activities", label: "活动管理", capability: "read" },
+  { key: "rolls", label: "Roll 记录", capability: "read" },
+  { key: "admins", label: "管理员", capability: "manage_admins" },
+  { key: "sessions", label: "在线会话", capability: "manage" },
+  { key: "audit", label: "审计日志", capability: "manage" },
+  { key: "export", label: "数据导出", capability: "manage" },
+  { key: "system", label: "系统状态", capability: "read" },
+];
+
+export const AdminNav = defineComponent({
+  name: "AdminNav",
+  props: { active: { type: String, default: "dashboard" } },
+  setup() {
+    const sections = computed(() => ADMIN_SECTIONS.filter((item) => allowed(item.capability)));
+    return { sections };
+  },
+  template: `
+    <nav class="admin__nav" aria-label="管理后台导航">
+      <a v-for="item in sections" :key="item.key"
+         :href="item.key === 'dashboard' ? '/admin' : '/admin/' + item.key" data-link
+         :aria-current="active === item.key ? 'page' : null">{{ item.label }}</a>
+    </nav>`,
+});
+
+export function allowed(capability) {
+  return capability === "read" || Boolean(store.me && store.me.capabilities.includes(capability));
+}
+
 function emptyActivity() {
-  return { name: "", description: "", roll_min: 1, roll_max: 100, max_participations: 1 };
+  return {
+    name: "",
+    description: "",
+    roll_min: 1,
+    roll_max: 100,
+    max_participations: 1,
+    max_participants: 0,
+  };
 }
 
 export const DashboardView = defineComponent({
@@ -182,17 +220,13 @@ export const DashboardView = defineComponent({
 
 export const ActivitiesView = defineComponent({
   name: "ActivitiesView",
-  components: { AppModal, Busy, ConfirmDialog, Pager, StatusPill },
+  components: { Busy, ConfirmDialog, Pager, StatusPill },
   setup() {
     const items = ref([]);
     const meta = ref({ page: 1, pages: 1, total: 0, page_size: 20 });
     const status = ref("");
     const q = ref("");
     const loading = ref(true);
-    const editing = ref(null);
-    const form = ref(emptyActivity());
-    const formError = ref("");
-    const busy = ref(false);
     const removing = ref(null);
 
     async function load(page = meta.value.page) {
@@ -203,56 +237,6 @@ export const ActivitiesView = defineComponent({
         meta.value = payload.meta;
       }
       loading.value = false;
-    }
-
-    function openCreate() {
-      editing.value = { mode: "create", id: "" };
-      form.value = emptyActivity();
-      formError.value = "";
-    }
-
-    function openEdit(activity) {
-      editing.value = { mode: "edit", id: activity.id };
-      form.value = {
-        name: activity.name,
-        description: activity.description,
-        roll_min: activity.roll_min,
-        roll_max: activity.roll_max,
-        max_participations: activity.max_participations,
-      };
-      formError.value = "";
-    }
-
-    async function save() {
-      formError.value = "";
-      if (!form.value.name.trim()) {
-        formError.value = "活动名称不能为空";
-        return;
-      }
-      if (Number(form.value.roll_max) < Number(form.value.roll_min)) {
-        formError.value = "最大值不能小于最小值";
-        return;
-      }
-      const payload = {
-        name: form.value.name.trim(),
-        description: form.value.description.trim(),
-        roll_min: Number(form.value.roll_min),
-        roll_max: Number(form.value.roll_max),
-        max_participations: Number(form.value.max_participations),
-      };
-      busy.value = true;
-      const action =
-        editing.value.mode === "create"
-          ? () => api.post("/admin/activities", payload)
-          : () => api.patch(`/admin/activities/${editing.value.id}`, payload);
-      const result = await run(action, editing.value.mode === "create" ? "活动已创建" : "活动已更新");
-      busy.value = false;
-      if (!result) {
-        formError.value = "保存失败，注意区间收窄会被拒绝（已有数值超出新范围）。";
-        return;
-      }
-      editing.value = null;
-      load();
     }
 
     async function setStatus(activity, next) {
@@ -269,8 +253,8 @@ export const ActivitiesView = defineComponent({
 
     onMounted(() => load(1));
     return {
-      items, meta, status, q, loading, editing, form, formError, busy, removing,
-      load, openCreate, openEdit, save, setStatus, remove,
+      items, meta, status, q, loading, removing,
+      load, setStatus, remove,
       STATUS_LABEL, dateTime, number, percent, can,
     };
   },
@@ -281,7 +265,7 @@ export const ActivitiesView = defineComponent({
           <h1 style="margin:0">活动管理</h1>
           <p class="muted" style="margin:0">创建、调整规则、暂停/结束活动，或删除整份 Roll 历史。</p>
         </div>
-        <button v-if="can('manage')" class="btn btn--primary" type="button" @click="openCreate">新建活动</button>
+        <a v-if="can('manage')" class="btn btn--primary" href="/admin/activities/new" data-link>新建活动</a>
       </div>
 
       <div class="filters card">
@@ -323,13 +307,13 @@ export const ActivitiesView = defineComponent({
                 <td class="num">{{ number(activity.roll_min) }}-{{ number(activity.roll_max) }}</td>
                 <td class="num">{{ number(activity.roll_count) }}</td>
                 <td class="num">{{ number(activity.void_count) }}</td>
-                <td class="num">{{ number(activity.participants) }}</td>
+                <td class="num">{{ number(activity.participants) }}<span v-if="activity.max_participants" class="faint">/{{ number(activity.max_participants) }}</span></td>
                 <td class="num">{{ activity.top_number ?? '—' }}</td>
                 <td class="num">{{ percent(activity.roll_count / (activity.roll_max - activity.roll_min + 1)) }}</td>
                 <td class="nowrap">{{ activity.created_by || '—' }}<div class="faint">{{ dateTime(activity.created_at) }}</div></td>
                 <td>
                   <div class="table__actions" v-if="can('manage')">
-                    <button class="btn btn--sm" type="button" @click="openEdit(activity)">编辑</button>
+                    <a class="btn btn--sm" :href="'/admin/activities/' + activity.id + '/edit'" data-link>编辑</a>
                     <button v-if="activity.status === 'active'" class="btn btn--sm" type="button" @click="setStatus(activity, 'paused')">暂停</button>
                     <button v-if="activity.status === 'paused'" class="btn btn--sm" type="button" @click="setStatus(activity, 'active')">恢复</button>
                     <button v-if="activity.status !== 'ended'" class="btn btn--sm" type="button" @click="setStatus(activity, 'ended')">结束</button>
@@ -347,45 +331,157 @@ export const ActivitiesView = defineComponent({
 
       <Pager v-if="meta.pages > 1" :meta="meta" @go="load"/>
 
-      <AppModal v-if="editing" :title="editing.mode === 'create' ? '新建活动' : '编辑活动'" @close="editing = null">
-        <div class="stack">
-          <label class="field">
-            <span class="field__label">名称</span>
-            <input id="a-name" class="input" v-model="form.name" maxlength="80" required>
-          </label>
-          <label class="field">
-            <span class="field__label">描述（可选）</span>
-            <textarea id="a-desc" class="textarea" v-model="form.description" maxlength="2000"></textarea>
-          </label>
-          <div class="form-grid">
-            <label class="field">
-              <span class="field__label">最小值</span>
-              <input id="a-min" class="input" type="number" v-model="form.roll_min" min="0" step="1">
-            </label>
-            <label class="field">
-              <span class="field__label">最大值</span>
-              <input id="a-max" class="input" type="number" v-model="form.roll_max" min="1" step="1">
-            </label>
-            <label class="field">
-              <span class="field__label">每人可 Roll 次数</span>
-              <input id="a-cap" class="input" type="number" v-model="form.max_participations" min="1" max="20" step="1">
-            </label>
-          </div>
-          <p class="faint" style="font-size:var(--text-xs);margin:0">
-            收窄区间时，若已有数值落在新范围外会被拒绝；先作废这些记录再保存。
-          </p>
-          <p v-if="formError" class="field__error" role="alert">{{ formError }}</p>
-        </div>
-        <template #footer>
-          <button class="btn" type="button" @click="editing = null">取消</button>
-          <button class="btn btn--primary" type="button" :disabled="busy" @click="save">{{ busy ? '保存中…' : '保存' }}</button>
-        </template>
-      </AppModal>
-
       <ConfirmDialog v-if="removing" title="删除活动"
         :message="'将永久删除「' + removing.name + '」及其 ' + removing.roll_count + ' 条 Roll 记录，无法恢复。'"
         confirm-label="删除" @result="(ok) => ok ? remove() : removing = null"/>
     </section>`,
+});
+
+/**
+ * Standalone create/edit page for an activity. It used to live in a modal,
+ * which cramped five rules plus their explanations into a floating box.
+ */
+export const ActivityFormView = defineComponent({
+  name: "ActivityFormView",
+  components: { AdminNav, Busy },
+  setup() {
+    const activityId = computed(() => routeParams.value.activity_id || "");
+    const isEdit = computed(() => Boolean(activityId.value));
+    const loading = ref(isEdit.value);
+    const current = ref(null);
+    const form = ref(emptyActivity());
+    const formError = ref("");
+    const busy = ref(false);
+
+    async function load() {
+      if (!isEdit.value) return;
+      loading.value = true;
+      const payload = await run(() => api.get(`/admin/activities/${activityId.value}`));
+      if (payload) {
+        current.value = payload;
+        form.value = {
+          name: payload.name,
+          description: payload.description,
+          roll_min: payload.roll_min,
+          roll_max: payload.roll_max,
+          max_participations: payload.max_participations,
+          max_participants: payload.max_participants,
+        };
+      }
+      loading.value = false;
+    }
+
+    async function save() {
+      formError.value = "";
+      if (!form.value.name.trim()) {
+        formError.value = "活动名称不能为空";
+        return;
+      }
+      if (Number(form.value.roll_max) < Number(form.value.roll_min)) {
+        formError.value = "最大值不能小于最小值";
+        return;
+      }
+      const payload = {
+        name: form.value.name.trim(),
+        description: form.value.description.trim(),
+        roll_min: Number(form.value.roll_min),
+        roll_max: Number(form.value.roll_max),
+        max_participations: Number(form.value.max_participations),
+        max_participants: Number(form.value.max_participants),
+      };
+      busy.value = true;
+      const action = isEdit.value
+        ? () => api.patch(`/admin/activities/${activityId.value}`, payload)
+        : () => api.post("/admin/activities", payload);
+      const result = await run(action, isEdit.value ? "活动已更新" : "活动已创建");
+      busy.value = false;
+      if (!result) {
+        formError.value = "保存失败：区间收窄会被已有数值挡住，名额已满时先作废记录。";
+        return;
+      }
+      navigate("/admin/activities");
+    }
+
+    onMounted(load);
+    return {
+      activityId, isEdit, loading, current, form, formError, busy, save,
+      STATUS_LABEL, number, can,
+    };
+  },
+  template: `
+    <div class="admin">
+      <AdminNav active="activities"/>
+      <section class="admin__section stack">
+        <div class="page-head">
+          <div>
+            <h1 style="margin:0">{{ isEdit ? '编辑活动' : '新建活动' }}</h1>
+            <p class="muted" style="margin:0">
+              <template v-if="current">
+                {{ current.name }} · {{ STATUS_LABEL[current.status] }} ·
+                已有 {{ number(current.roll_count) }} 条有效数值、{{ number(current.participants) }} 人参与
+              </template>
+              <template v-else>规则保存后立即对参与页生效。</template>
+            </p>
+          </div>
+          <div class="row">
+            <a v-if="current" class="btn btn--ghost" :href="'/activity/' + activityId" data-link>查看参与页</a>
+            <a class="btn btn--ghost" href="/admin/activities" data-link>返回列表</a>
+          </div>
+        </div>
+
+        <Busy v-if="loading" text="正在加载活动…"/>
+
+        <p v-else-if="isEdit && !current" class="card muted">活动不存在或已被删除，返回列表看看其他活动。</p>
+
+        <form v-else-if="can('manage')" class="card stack" @submit.prevent="save">
+          <label class="field">
+            <span class="field__label">名称</span>
+            <input id="af-name" class="input" v-model="form.name" maxlength="80" required autocomplete="off">
+          </label>
+          <label class="field">
+            <span class="field__label">描述（可选）</span>
+            <textarea id="af-desc" class="textarea" v-model="form.description" maxlength="2000"></textarea>
+          </label>
+
+          <p class="panel-title">Roll 规则</p>
+          <div class="form-grid">
+            <label class="field">
+              <span class="field__label">最小值</span>
+              <input id="af-min" class="input" type="number" v-model="form.roll_min" min="0" step="1" required>
+            </label>
+            <label class="field">
+              <span class="field__label">最大值</span>
+              <input id="af-max" class="input" type="number" v-model="form.roll_max" min="1" step="1" required>
+            </label>
+            <label class="field">
+              <span class="field__label">每人可 Roll 次数</span>
+              <input id="af-quota" class="input" type="number" v-model="form.max_participations" min="1" max="20" step="1" required>
+              <span class="field__hint">同一个人最多能占几个数值。</span>
+            </label>
+            <label class="field">
+              <span class="field__label">参与人数上限</span>
+              <input id="af-people" class="input" type="number" v-model="form.max_participants" min="0" max="1000" step="1" required>
+              <span class="field__hint">填 0 表示不限人数；满员后只有已上榜的人还能继续 Roll。</span>
+            </label>
+          </div>
+
+          <p class="faint" style="font-size:var(--text-xs);margin:0">
+            收窄区间时，若已有数值落在新范围外会被拒绝；先作废这些记录再保存。
+            调低人数上限不会踢掉已经在榜的人，只是不再放新人进来。
+          </p>
+          <p v-if="formError" class="field__error" role="alert">{{ formError }}</p>
+
+          <div class="row row--end">
+            <a class="btn" href="/admin/activities" data-link>取消</a>
+            <button class="btn btn--primary" type="submit" :disabled="busy">
+              <span v-if="busy" class="spinner" aria-hidden="true"></span>{{ busy ? '保存中…' : '保存' }}
+            </button>
+          </div>
+        </form>
+
+        <p v-else class="pill pill--paused" role="status">当前角色无权修改活动，请联系管理员。</p>
+      </section>
+    </div>`,
 });
 
 export const RollsView = defineComponent({

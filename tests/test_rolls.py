@@ -34,6 +34,42 @@ def test_repeat_participant_is_rejected_until_quota_allows(admin_client):
     admin_client.delete(f"{PREFIX}/admin/activities/{activity_id}")
 
 
+def test_participant_cap_blocks_new_names_only(admin_client):
+    activity_id = create_activity(
+        admin_client, roll_min=1, roll_max=10, max_participations=2, max_participants=2
+    )
+    for name in ("甲", "乙"):
+        assert admin_client.post(f"{PREFIX}/activities/{activity_id}/rolls", json={"name": name}).status_code == 201
+
+    # 已经上榜的人仍可用完自己的次数，被挡住的是第 3 个新名字。
+    assert admin_client.post(f"{PREFIX}/activities/{activity_id}/rolls", json={"name": "甲"}).status_code == 201
+    blocked = admin_client.post(f"{PREFIX}/activities/{activity_id}/rolls", json={"name": "丙"})
+    assert blocked.status_code == 409
+    assert "名额已满" in blocked.json()["error"]["message"]
+    admin_client.delete(f"{PREFIX}/admin/activities/{activity_id}")
+
+
+def test_voiding_every_record_of_a_name_frees_its_slot(admin_client):
+    activity_id = create_activity(admin_client, roll_min=1, roll_max=10, max_participants=1)
+    first = admin_client.post(f"{PREFIX}/activities/{activity_id}/rolls", json={"name": "占位者"})
+    assert first.status_code == 201
+    assert admin_client.post(f"{PREFIX}/activities/{activity_id}/rolls", json={"name": "后来者"}).status_code == 409
+
+    roll_id = first.json()["roll"]["id"]
+    assert admin_client.put(f"{PREFIX}/admin/rolls/{roll_id}/void", json={"reason": "误操作"}).status_code == 200
+    assert admin_client.post(f"{PREFIX}/activities/{activity_id}/rolls", json={"name": "后来者"}).status_code == 201
+    admin_client.delete(f"{PREFIX}/admin/activities/{activity_id}")
+
+
+def test_uncapped_activity_accepts_new_names(admin_client):
+    activity_id = create_activity(admin_client, roll_min=1, roll_max=10, max_participants=0)
+    for index in range(3):
+        response = admin_client.post(f"{PREFIX}/activities/{activity_id}/rolls", json={"name": f"队友{index}"})
+        assert response.status_code == 201
+        assert response.json()["activity"]["max_participants"] == 0
+    admin_client.delete(f"{PREFIX}/admin/activities/{activity_id}")
+
+
 def test_range_exhaustion_reports_conflict(admin_client):
     activity_id = create_activity(admin_client, roll_min=1, roll_max=2)
     for name in ("甲", "乙"):

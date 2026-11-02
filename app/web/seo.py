@@ -103,9 +103,10 @@ def activity_meta(db: Session, settings: Settings, base: str, activity_id: str) 
         )
     ).scalar_one()
 
+    cap = f"，仅限前 {activity.max_participants} 人" if activity.max_participants else ""
     summary = (
         f"{activity.name}（{status_label}）：Roll 点范围 {activity.roll_min}-{activity.roll_max}，"
-        f"每人最多 {activity.max_participations} 次，已有 {total} 人参与。"
+        f"每人最多 {activity.max_participations} 次{cap}，已有 {total} 条有效数值。"
     )
     if activity.description:
         summary = f"{activity.description[:120]} {summary}"

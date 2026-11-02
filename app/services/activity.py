@@ -64,6 +64,7 @@ def serialize(activity: Activity, stats: RollStats, *, admin_view: bool = False)
         "roll_min": activity.roll_min,
         "roll_max": activity.roll_max,
         "max_participations": activity.max_participations,
+        "max_participants": activity.max_participants,
         "created_at": activity.created_at,
         "started_at": activity.started_at,
         "ended_at": activity.ended_at,
@@ -158,6 +159,7 @@ def create(
         roll_min=payload.roll_min,
         roll_max=payload.roll_max,
         max_participations=payload.max_participations,
+        max_participants=payload.max_participants,
         created_at=now,
         started_at=now,
         created_by_id=actor.admin_id,
@@ -169,7 +171,8 @@ def create(
         actor=actor,
         target_type="activity",
         target_id=activity.id,
-        detail={"name": activity.name, "range": [activity.roll_min, activity.roll_max]},
+        detail={"name": activity.name, "range": [activity.roll_min, activity.roll_max],
+                "max_participants": activity.max_participants},
         ip=ip,
     )
     _commit(db)
@@ -204,6 +207,13 @@ def update(
             "to": payload.max_participations,
         }
         activity.max_participations = payload.max_participations
+
+    if payload.max_participants is not None and payload.max_participants != activity.max_participants:
+        changes["max_participants"] = {
+            "from": activity.max_participants,
+            "to": payload.max_participants,
+        }
+        activity.max_participants = payload.max_participants
 
     if changes:
         activity.updated_at = utc_now()

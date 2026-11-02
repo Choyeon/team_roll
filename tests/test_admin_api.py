@@ -50,10 +50,28 @@ def test_paused_activity_hides_from_the_home_list(admin_client):
 
 def test_range_cannot_shrink_below_existing_rolls(admin_client):
     activity_id = create_activity(admin_client, name="收窄范围", roll_min=1, roll_max=20)
-    admin_client.post(f"{PREFIX}/activities/{activity_id}/rolls", json={"name": "高点"})
+    # A hand-placed number keeps the assertion independent of the dice.
+    placed = admin_client.post(
+        f"{PREFIX}/admin/activities/{activity_id}/rolls", json={"name": "高点", "number": 20, "reason": ""}
+    )
+    assert placed.status_code == 201, placed.text
     narrowed = admin_client.patch(f"{PREFIX}/admin/activities/{activity_id}", json={"roll_max": 2})
     assert narrowed.status_code == 409
     assert "范围不能收窄" in narrowed.json()["error"]["message"]
+    admin_client.delete(f"{PREFIX}/admin/activities/{activity_id}")
+
+
+def test_participant_cap_is_editable_and_public(admin_client):
+    activity_id = create_activity(admin_client, name="人数上限", max_participants=30)
+    assert admin_client.get(f"{PREFIX}/activities/{activity_id}").json()["max_participants"] == 30
+
+    updated = admin_client.patch(f"{PREFIX}/admin/activities/{activity_id}", json={"max_participants": 0})
+    assert updated.status_code == 200
+    assert updated.json()["max_participants"] == 0
+    assert admin_client.get(f"{PREFIX}/activities/{activity_id}").json()["max_participants"] == 0
+
+    rejected = admin_client.patch(f"{PREFIX}/admin/activities/{activity_id}", json={"max_participants": -1})
+    assert rejected.status_code == 422
     admin_client.delete(f"{PREFIX}/admin/activities/{activity_id}")
 
 
