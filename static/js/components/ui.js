@@ -30,7 +30,7 @@ export const StatusPill = defineComponent({
 export const EmptyState = defineComponent({
   name: "EmptyState",
   props: { text: { type: String, default: "暂无数据" } },
-  template: `<div class="state"><div class="state__icon" aria-hidden="true">◇</div><p>{{ text }}</p></div>`,
+  template: `<div class="state"><div class="state__icon" aria-hidden="true">◇</div><p>{{ text }}</p><slot/></div>`,
 });
 
 export const Busy = defineComponent({

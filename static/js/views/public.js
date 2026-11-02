@@ -25,6 +25,7 @@ export const HomeView = defineComponent({
     const q = ref("");
     const loading = ref(true);
     const error = ref("");
+    const activeTotal = ref(null);
     let searchTimer = null;
 
     async function load(page = 1) {
@@ -41,17 +42,60 @@ export const HomeView = defineComponent({
       }
     }
 
+    // 独立于当前筛选的一次轻量计数，让首屏能回答“现在有没有活动在跑”。
+    async function loadActiveTotal() {
+      try {
+        const data = await api.get("/activities", { status: "active", page_size: 1 });
+        activeTotal.value = data.meta.total;
+      } catch {
+        activeTotal.value = null;
+      }
+    }
+
     function search() {
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => load(1), 250);
     }
 
-    onMounted(() => load());
+    function showActive() {
+      status.value = "active";
+      load(1);
+    }
+
+    function clearFilters() {
+      status.value = "";
+      q.value = "";
+      load(1);
+    }
+
+    onMounted(() => {
+      load();
+      loadActiveTotal();
+    });
     const ratio = (activity) => {
       const size = activity.roll_max - activity.roll_min + 1;
       return size ? Math.min(1, activity.roll_count / size) : 0;
     };
-    return { items, meta, status, q, loading, error, load, search, ratio, STATUS_LABEL, dateTime, number, percent };
+    const filtered = computed(() => Boolean(status.value) || Boolean(q.value.trim()));
+    return {
+      items,
+      meta,
+      status,
+      q,
+      loading,
+      error,
+      activeTotal,
+      filtered,
+      load,
+      search,
+      showActive,
+      clearFilters,
+      ratio,
+      STATUS_LABEL,
+      dateTime,
+      number,
+      percent,
+    };
   },
   template: `
     <div class="page stack">
@@ -59,8 +103,11 @@ export const HomeView = defineComponent({
         <h1 class="hero__title">团队 Roll 点</h1>
         <p class="hero__lead">管理员创建活动并设定数值区间，队友在同一个页面 Roll 点，结果按数值从高到低实时排行。
           每人可参与次数、区间上限都由活动规则决定，作废的数值会自动释放。</p>
-        <p class="faint" style="font-size:var(--text-xs)">共 {{ meta.total }} 个公开活动 · 数据接口
-          <a href="/api/v1/activities" rel="noopener">/api/v1/activities</a></p>
+        <div class="row" v-if="activeTotal">
+          <button class="btn btn--primary" type="button" @click="showActive">
+            参与进行中的活动 · {{ number(activeTotal) }}
+          </button>
+        </div>
       </section>
 
       <div class="row row--between">
@@ -68,15 +115,21 @@ export const HomeView = defineComponent({
           <button class="tab" role="tab" v-for="tab in [['', '全部'], ['active', '进行中'], ['paused', '已暂停'], ['ended', '已结束']]"
                   :key="tab[0]" type="button" :aria-current="status === tab[0]" @click="status = tab[0]; load(1)">{{ tab[1] }}</button>
         </div>
-        <label class="field" style="min-width:12rem">
-          <span class="sr-only">搜索活动</span>
-          <input class="input" v-model="q" type="search" placeholder="搜索活动名称…" @input="search">
-        </label>
+        <div class="row">
+          <span class="faint" aria-live="polite" style="font-size:var(--text-xs)">共 {{ number(meta.total) }} 个</span>
+          <label class="field" style="min-width:12rem">
+            <span class="sr-only">搜索活动</span>
+            <input class="input" v-model="q" type="search" placeholder="搜索活动名称…" @input="search">
+          </label>
+        </div>
       </div>
 
       <Busy v-if="loading" text="正在加载活动…"/>
       <p v-else-if="error" class="pill pill--ended">{{ error }}</p>
-      <EmptyState v-else-if="!items.length" text="没有符合条件的活动，换个筛选条件试试。"/>
+      <EmptyState v-else-if="!items.length && filtered" text="没有符合筛选条件的活动。">
+        <button class="btn btn--sm" type="button" @click="clearFilters">清除筛选</button>
+      </EmptyState>
+      <EmptyState v-else-if="!items.length" text="还没有公开活动，管理员创建后会显示在这里。"/>
 
       <div v-else class="grid-cards">
         <article v-for="activity in items" :key="activity.id" class="card activity-card">
