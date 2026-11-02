@@ -1,0 +1,80 @@
+/* Design tokens — the only place raw color values are allowed.
+   Light/dark pairs are resolved by `light-dark()` from the used `color-scheme`,
+   so the OS preference wins by default and the theme toggle only rewrites
+   `color-scheme` (no inline script needed, CSP stays 'self'-only). */
+
+:root {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans SC", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+
+  --text-2xs: 0.7rem;
+  --text-xs: 0.78rem;
+  --text-sm: 0.86rem;
+  --text-base: 0.95rem;
+  --text-lg: 1.1rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.7rem;
+  --text-3xl: 2.2rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 220ms;
+
+  --z-header: 20;
+  --z-modal: 40;
+  --z-toast: 50;
+
+  color-scheme: light dark;
+
+  --bg: light-dark(#f6f7fb, #171923);
+  --bg-elevated: light-dark(#ffffff, #22252f);
+  --bg-subtle: light-dark(#eef0f7, #1c1f29);
+  --bg-hover: light-dark(#e6e9f4, #2b2f3c);
+  --border: light-dark(#dcdfeb, #323648);
+  --border-strong: light-dark(#c2c7dd, #454a63);
+  --text: light-dark(#1c1f2b, #e9eaf3);
+  --text-muted: light-dark(#5b6178, #a4aabe);
+  --text-faint: light-dark(#8a90a6, #7b8199);
+  --brand: light-dark(#4f46e5, #8b87ff);
+  --brand-hover: light-dark(#4338ca, #a5a2ff);
+  --brand-soft: light-dark(#e8e6fd, #2b2b57);
+  --brand-contrast: light-dark(#ffffff, #14152a);
+  --success: light-dark(#15803d, #5fd68c);
+  --success-soft: light-dark(#dcfce7, #1c3b2a);
+  --warning: light-dark(#a1560b, #f5c56a);
+  --warning-soft: light-dark(#fef3c7, #3a2f18);
+  --danger: light-dark(#b91c1c, #f78f8f);
+  --danger-soft: light-dark(#fee2e2, #3d2021);
+  --info: light-dark(#0f6ba8, #7fc4f2);
+  --info-soft: light-dark(#dbeafe, #1b2f42);
+  --chart-1: light-dark(#4f46e5, #8b87ff);
+  --chart-2: light-dark(#0ea5a4, #4fd1c5);
+  --chart-3: light-dark(#d97706, #f5c56a);
+  --chart-4: light-dark(#db2777, #f286c8);
+  --chart-grid: light-dark(#dcdfeb, #323648);
+  --shadow-sm: 0 1px 2px light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.4));
+  --shadow: 0 6px 20px light-dark(rgb(15 23 42 / 0.1), rgb(0 0 0 / 0.45));
+  --shadow-lg: 0 18px 48px light-dark(rgb(15 23 42 / 0.2), rgb(0 0 0 / 0.55));
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block title %}Team Roll - 管理员页面{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* 表格行悬停效果 */
+    .table-row {
+        transition: background-color 0.2s ease;
+    }
+    
+    .table-row:hover {
+        /* 仅保留背景色变化，移除可能导致滚动条的transform */
+    }
+    
+    /* 动画效果 */
+    .fade-in {
+        animation: fadeIn 0.5s ease-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* 加载动画 */
+    .spinner {
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 2px solid white;
+        width: 16px;
+        height: 16px;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- 页面标题和用户信息 -->
+    <div class="text-center mb-8 fade-in">
+        <h1 class="text-4xl font-bold text-primary mb-2">管理员控制台</h1>
+        <p class="text-gray-600 dark:text-gray-400">欢迎回来，管理员！</p>
+    </div>
+    
+    <!-- 统计卡片 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 fade-in" style="animation-delay: 0.1s">
+        <div class="glass-effect p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">总活动数</p>
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white">{{ activities|length }}</h3>
+                </div>
+                <div class="text-4xl text-primary">🎲</div>
+            </div>
+        </div>
+        
+        <div class="glass-effect p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">进行中活动</p>
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white">{{ activities|selectattr('is_active', 'eq', true)|list|length }}</h3>
+                </div>
+                <div class="text-4xl text-green-500">🔄</div>
+            </div>
+        </div>
+        
+        <div class="glass-effect p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">已结束活动</p>
+                    <h3 class="text-3xl font-bold text-gray-900 dark:text-white">{{ activities|selectattr('is_active', 'eq', false)|list|length }}</h3>
+                </div>
+                <div class="text-4xl text-red-500">✅</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 创建新活动 -->
+    <div class="glass-effect p-8 mb-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 fade-in" style="animation-delay: 0.2s">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200 flex items-center gap-2">
+            <span class="text-primary">➕</span>
+            创建新活动
+        </h2>
+        <form id="create-activity-form" action="/admin/create_activity" method="post" class="space-y-6" data-auto-save="true">
+            <div class="grid grid-cols-1 md:grid-cols-1 gap-6">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">活动名称</label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        required 
+                        placeholder="请输入活动名称（例如：夔牛ROLL点）" 
+                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors duration-300 shadow-sm focus:shadow-md"
+                    >
+                </div>
+                
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">活动描述（可选）</label>
+                    <textarea 
+                        id="description" 
+                        name="description" 
+                        rows="4" 
+                        placeholder="请输入活动描述" 
+                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors duration-300 shadow-sm focus:shadow-md resize-y"
+                    ></textarea>
+                </div>
+                
+                <!-- 活动规则设置 -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
+                        <span>🎯</span>
+                        <span>活动规则设置</span>
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Roll点最小值 -->
+                        <div>
+                            <label for="roll_min" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roll点最小值</label>
+                            <input 
+                                type="number" 
+                                id="roll_min" 
+                                name="roll_min" 
+                                value="1" 
+                                min="1" 
+                                max="1000" 
+                                class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors duration-300 shadow-sm focus:shadow-md"
+                            >
+                        </div>
+                        
+                        <!-- Roll点最大值 -->
+                        <div>
+                            <label for="roll_max" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roll点最大值</label>
+                            <input 
+                                type="number" 
+                                id="roll_max" 
+                                name="roll_max" 
+                                value="100" 
+                                min="1" 
+                                max="1000" 
+                                class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors duration-300 shadow-sm focus:shadow-md"
+                            >
+                        </div>
+                        
+                        <!-- 每人最多参与次数 -->
+                        <div>
+                            <label for="max_participations" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">每人最多参与次数</label>
+                            <input 
+                                type="number" 
+                                id="max_participations" 
+                                name="max_participations" 
+                                value="1" 
+                                min="1" 
+                                max="10" 
+                                class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors duration-300 shadow-sm focus:shadow-md"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end">
+                <button 
+                    type="submit" 
+                    class="px-8 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-all duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-dark-bg"
+                >
+                    <span class="flex items-center gap-2">
+                        <span>创建活动</span>
+                        <span>🚀</span>
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 活动管理列表 -->
+    <div class="glass-effect p-8 mb-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 fade-in" style="animation-delay: 0.3s">
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-6">
+            <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2 mb-4 md:mb-0">
+                <span class="text-primary">📋</span>
+                活动管理
+            </h2>
+            
+            <!-- 搜索过滤功能 -->
+            <div class="relative w-full md:w-64">
+                <input 
+                    type="text" 
+                    id="search-activities" 
+                    placeholder="搜索活动名称..." 
+                    class="w-full px-4 py-3 pl-10 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors duration-300 shadow-sm"
+                >
+                <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</div>
+            </div>
+        </div>
+        
+        {% if activities %}
+            <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                <table class="w-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                            <th class="px-8 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">活动名称</th>
+                            <th class="px-8 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">描述</th>
+                            <th class="px-8 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">创建时间</th>
+                            <th class="px-8 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">规则</th>
+                            <th class="px-8 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">状态</th>
+                            <th class="px-8 py-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for activity in activities %}
+                            <tr class="table-row hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200">
+                                <td class="px-8 py-5 whitespace-nowrap text-gray-900 dark:text-white font-medium">{{ activity.name }}</td>
+                                <td class="px-8 py-5 text-gray-600 dark:text-gray-400 max-w-xs truncate">
+                                    {% if activity.description %}
+                                        {{ activity.description }}
+                                    {% else %}
+                                        <span class="text-gray-400 dark:text-gray-500 italic">无描述</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-8 py-5 whitespace-nowrap text-gray-600 dark:text-gray-400">
+                                    <div class="text-sm">
+                                        <div>{{ activity.created_at[:10] }}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-500">{{ activity.created_at[11:19] }}</div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5 whitespace-nowrap">
+                                    <div class="text-sm">
+                                        <div class="font-medium">规则</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                                            Roll点范围: {{ activity.roll_min }}-{{ activity.roll_max }}
+                                        </div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                                            参与次数: 最多{{ activity.max_participations }}次/人
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5 whitespace-nowrap">
+                                    {% if activity.is_active %}
+                                        <span class="px-4 py-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm font-medium flex items-center gap-1">
+                                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                            进行中
+                                        </span>
+                                    {% else %}
+                                        <span class="px-4 py-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-sm font-medium">已结束</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-8 py-5 whitespace-nowrap">
+                                    <div class="flex gap-3 flex-wrap">
+                                        <!-- 查看活动 -->
+                                        <button 
+                                            onclick="window.location.href='/activity/{{ activity.id }}'" 
+                                            class="px-4 py-2 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-lg text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-all duration-200 shadow-sm hover:shadow-md"
+                                        >
+                                            <span class="flex items-center gap-1">
+                                                <span>👁️</span>
+                                                <span>查看</span>
+                                            </span>
+                                        </button>
+                                        
+                                        <!-- 结束活动 -->
+                                        {% if activity.is_active %}
+                                            <form action="/admin/end_activity/{{ activity.id }}" method="post" class="inline" onsubmit="return confirm('确定要结束此活动吗？结束后用户将无法继续参与Roll点。')">
+                                                <button 
+                                                    type="submit" 
+                                                    class="px-4 py-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded-lg text-sm font-medium hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-all duration-200 shadow-sm hover:shadow-md"
+                                                >
+                                                    <span class="flex items-center gap-1">
+                                                        <span>⏹️</span>
+                                                        <span>结束</span>
+                                                    </span>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                        
+                                        <!-- 删除活动 -->
+                                        <form action="/admin/delete_activity/{{ activity.id }}" method="post" class="inline" onsubmit="return confirm('确定要删除此活动吗？此操作不可恢复，所有相关数据将被永久删除。')">
+                                            <button 
+                                                type="submit" 
+                                                class="px-4 py-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg text-sm font-medium hover:bg-red-200 dark:hover:bg-red-800 transition-all duration-200 shadow-sm hover:shadow-md"
+                                            >
+                                                <span class="flex items-center gap-1">
+                                                    <span>🗑️</span>
+                                                    <span>删除</span>
+                                                </span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <!-- 空状态 -->
+            <div class="text-center py-16">
+                <div class="text-8xl mb-4">🎲</div>
+                <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">暂无活动</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">开始创建您的第一个活动吧！</p>
+                <button 
+                    onclick="document.getElementById('name').focus()" 
+                    class="px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors duration-300 shadow-md hover:shadow-lg"
+                >
+                    <span class="flex items-center gap-2">
+                        <span>➕</span>
+                        <span>立即创建</span>
+                    </span>
+                </button>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8 fade-in" style="animation-delay: 0.4s">
+        <button 
+            onclick="window.location.href='/'" 
+            class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg"
+        >
+            <span class="flex items-center gap-2">
+                <span>🏠</span>
+                <span>返回首页</span>
+            </span>
+        </button>
+        <button 
+            onclick="window.location.href='/admin/logout'" 
+            class="px-6 py-3 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-all duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg"
+        >
+            <span class="flex items-center gap-2">
+                <span>🚪</span>
+                <span>安全登出</span>
+            </span>
+        </button>
+    </div>
+</div>
+
+<!-- 搜索功能JavaScript -->
+<script>
+document.getElementById('search-activities').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('tbody tr');
+    
+    rows.forEach(row => {
+        const activityName = row.cells[0].textContent.toLowerCase();
+        if (activityName.includes(searchTerm)) {
+            row.style.display = '';
+            row.classList.add('table-row');
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

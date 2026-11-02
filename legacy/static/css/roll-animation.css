@@ -1,0 +1,292 @@
+/* Roll点动画模态框样式 */
+.roll-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.roll-modal.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* 数字动画过渡效果 */
+.roll-number {
+    transition: all 0.1s ease;
+}
+
+/* 容器过渡动画效果 */
+.roll-container {
+    transition: all 0.3s ease;
+}
+
+.roll-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+}
+
+.roll-container {
+  position: relative;
+  width: 90%;
+  max-width: 500px;
+  background: linear-gradient(145deg, rgba(40, 40, 50, 0.95), rgba(30, 30, 40, 0.95));
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  transform: scale(0.9);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  z-index: 10001;
+}
+
+.roll-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: linear-gradient(90deg, #5a5a9a, #4a4a8a);
+  transition: all 0.5s ease;
+}
+
+/* 不同数值范围的颜色 */
+.roll-container.range-0-20::before {
+  background: linear-gradient(90deg, #aaaaaa, #dddddd);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.roll-container.range-20-40::before {
+  background: linear-gradient(90deg, #00cc66, #66ff99);
+  box-shadow: 0 0 15px rgba(0, 204, 102, 0.4);
+}
+
+.roll-container.range-40-60::before {
+  background: linear-gradient(90deg, #3399ff, #66ccff);
+  box-shadow: 0 0 15px rgba(51, 153, 255, 0.4);
+}
+
+.roll-container.range-60-70::before {
+  background: linear-gradient(90deg, #cc66ff, #ff99ff);
+  box-shadow: 0 0 15px rgba(204, 102, 255, 0.4);
+}
+
+.roll-container.range-70-89::before {
+  background: linear-gradient(90deg, #ffcc00, #ffdd55);
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
+}
+
+.roll-container.range-90-100::before {
+  background: linear-gradient(90deg, #ff0033, #ff3366);
+  box-shadow: 0 0 25px rgba(255, 0, 51, 0.6);
+}
+
+.roll-container.active {
+  transform: scale(1);
+}
+
+.roll-header h2 {
+  margin: 0 0 10px 0;
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.player-name {
+  color: #a0a0ff;
+  font-size: 1.2rem;
+  margin-bottom: 30px;
+  font-weight: 500;
+}
+
+.roll-display {
+  margin: 30px 0;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.roll-number {
+  font-size: 5rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+  transition: all 0.1s ease;
+}
+
+/* 不同数值范围的颜色 */
+.roll-container.range-0-20 .roll-number {
+  color: #ffffff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.7);
+}
+
+.roll-container.range-20-40 .roll-number {
+  color: #00cc66;
+  text-shadow: 0 0 20px rgba(0, 204, 102, 0.7);
+}
+
+.roll-container.range-40-60 .roll-number {
+  color: #3399ff;
+  text-shadow: 0 0 20px rgba(51, 153, 255, 0.7);
+}
+
+.roll-container.range-60-70 .roll-number {
+  color: #cc66ff;
+  text-shadow: 0 0 20px rgba(204, 102, 255, 0.7);
+}
+
+.roll-container.range-70-89 .roll-number {
+  color: #ffcc00;
+  text-shadow: 0 0 20px rgba(255, 204, 0, 0.7);
+}
+
+.roll-container.range-90-100 .roll-number {
+  color: #ff3b30;
+  text-shadow: 0 0 30px rgba(255, 59, 48, 0.8);
+}
+
+.roll-quality-indicator {
+  margin: 20px 0;
+}
+
+.quality-text {
+  display: inline-block;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  background: rgba(90, 90, 154, 0.3);
+  color: #a0a0ff;
+  border: 1px solid rgba(90, 90, 154, 0.5);
+}
+
+/* 不同数值范围的颜色 */
+.roll-container.range-0-20 .quality-text {
+  background: rgba(170, 170, 170, 0.3);
+  color: #ffffff;
+  border: 1px solid rgba(200, 200, 200, 0.5);
+}
+
+.roll-container.range-20-40 .quality-text {
+  background: rgba(0, 204, 102, 0.3);
+  color: #00cc66;
+  border: 1px solid rgba(0, 204, 102, 0.5);
+}
+
+.roll-container.range-40-60 .quality-text {
+  background: rgba(51, 153, 255, 0.3);
+  color: #3399ff;
+  border: 1px solid rgba(51, 153, 255, 0.5);
+}
+
+.roll-container.range-60-70 .quality-text {
+  background: rgba(204, 102, 255, 0.3);
+  color: #cc66ff;
+  border: 1px solid rgba(204, 102, 255, 0.5);
+}
+
+.roll-container.range-70-89 .quality-text {
+  background: rgba(255, 204, 0, 0.3);
+  color: #ffcc00;
+  border: 1px solid rgba(255, 204, 0, 0.5);
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
+}
+
+.roll-container.range-90-100 .quality-text {
+  background: rgba(255, 59, 48, 0.3);
+  color: #ff3b30;
+  border: 1px solid rgba(255, 59, 48, 0.5);
+  box-shadow: 0 0 15px rgba(255, 59, 48, 0.3);
+}
+
+.roll-progress {
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 30px;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #5a5a9a, #4a4a8a);
+  border-radius: 4px;
+  transition: all 0.5s ease;
+  box-shadow: 0 0 10px rgba(90, 90, 154, 0.4);
+}
+
+/* 不同数值范围的颜色 */
+.roll-container.range-0-20 .progress-bar {
+  background: linear-gradient(90deg, #aaaaaa, #dddddd);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.roll-container.range-20-40 .progress-bar {
+  background: linear-gradient(90deg, #00cc66, #66ff99);
+  box-shadow: 0 0 10px rgba(0, 204, 102, 0.4);
+}
+
+.roll-container.range-40-60 .progress-bar {
+  background: linear-gradient(90deg, #3399ff, #66ccff);
+  box-shadow: 0 0 10px rgba(51, 153, 255, 0.4);
+}
+
+.roll-container.range-60-70 .progress-bar {
+  background: linear-gradient(90deg, #cc66ff, #ff99ff);
+  box-shadow: 0 0 10px rgba(204, 102, 255, 0.4);
+}
+
+.roll-container.range-70-89 .progress-bar {
+  background: linear-gradient(90deg, #ffcc00, #ffdd55);
+  box-shadow: 0 0 15px rgba(255, 204, 0, 0.5);
+}
+
+.roll-container.range-90-100 .progress-bar {
+  background: linear-gradient(90deg, #ff0033, #ff3366);
+  box-shadow: 0 0 20px rgba(255, 0, 51, 0.6);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .roll-container {
+    width: 95%;
+    padding: 20px;
+  }
+  
+  .roll-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .player-name {
+    font-size: 1rem;
+  }
+  
+  .roll-number {
+    font-size: 3.5rem;
+  }
+  
+  .quality-text {
+    font-size: 1rem;
+    padding: 6px 15px;
+  }
+}

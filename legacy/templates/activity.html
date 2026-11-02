@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}{{ activity.name }} - Team Roll{% endblock %}
+
+{% block extra_meta %}
+<meta name="activity-id" content="{{ activity.id }}">
+{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto">
+    <!-- 活动标题和状态 -->
+    <div class="mb-8">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+            <h1 class="text-3xl md:text-4xl font-bold text-primary">{{ activity.name }}</h1>
+            {% if activity.is_active %}
+                <span class="px-4 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm font-medium">进行中</span>
+            {% else %}
+                <span class="px-4 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-sm font-medium">已结束</span>
+            {% endif %}
+        </div>
+        <p class="text-gray-600 dark:text-gray-400 text-lg">{{ activity.description }}</p>
+    </div>
+    
+    <!-- 错误信息 -->
+    {% if error %}
+        <div class="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 p-4 rounded-lg mb-6 text-center font-medium border border-red-200 dark:border-red-800 shadow-sm">
+            ⚠️ {{ error }}
+        </div>
+    {% endif %}
+    
+    <!-- 参与Roll点表单 -->
+    <div class="glass-effect p-6 mb-8">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200">参与Roll点</h2>
+        {% if activity.is_active %}
+            <form action="/activity/{{ activity.id }}/roll" method="post" class="max-w-md mx-auto roll-form">
+                <div class="mb-6">
+                    <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">你的名字</label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        required 
+                        placeholder="请输入你的名字" 
+                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors duration-300"
+                    >
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-dark-bg whitespace-nowrap"
+                >
+                    开始Roll点
+                </button>
+            </form>
+        {% else %}
+            <div class="text-center py-8 bg-red-100 dark:bg-red-900/20 rounded-lg text-red-800 dark:text-red-200">
+                <p>活动已结束，无法继续参与Roll点。</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Roll点结果 -->
+    <div class="glass-effect p-6 mb-8">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Roll点结果</h2>
+        
+        {% if results %}
+            <!-- 统计信息 -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                    <div class="text-3xl font-bold text-primary">{{ results|length }}</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">参与人数</div>
+                </div>
+                {% set sorted_results = results|sort(attribute='number', reverse=True) %}
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+                    <div class="text-3xl font-bold text-primary">{{ sorted_results[0].number if sorted_results else 0 }}</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">最高数值</div>
+                </div>
+            </div>
+            
+            <!-- 排行榜表格 -->
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">排名</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">姓名</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">数值</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">参与时间</th>
+                            {% if is_admin %}
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ip-cell">IP地址</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">操作</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% set sorted_results = results | sort(attribute='number', reverse=True) %}
+                        {% for result in sorted_results %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if loop.index == 1 %}
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-yellow-400 text-yellow-900 font-bold">1</span>
+                                    {% elif loop.index == 2 %}
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-400 text-gray-900 font-bold">2</span>
+                                    {% elif loop.index == 3 %}
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-600 text-amber-100 font-bold">3</span>
+                                    {% else %}
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold">{{ loop.index }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white font-medium">{{ result.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <strong class="text-2xl text-primary">{{ result.number }}</strong>
+                                        {% if loop.index == 1 %}
+                                            <span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs font-medium">胜出</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">
+                                    <div class="text-sm">
+                                        <div>{{ result.timestamp[:10] }}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-500">{{ result.timestamp[11:19] }}</div>
+                                    </div>
+                                </td>
+                                {% if is_admin %}
+                                    <td class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">{{ result.ip }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <form action="/admin/delete_roll/{{ activity.id }}/{{ loop.index0 }}" method="post" class="inline" onsubmit="return confirm('确定要删除该Roll点结果吗？此操作不可恢复。')">
+                                            <button 
+                                                type="submit" 
+                                                class="px-3 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded text-xs font-medium hover:bg-red-200 dark:hover:bg-red-800 transition-colors duration-150"
+                                            >
+                                                删除
+                                            </button>
+                                        </form>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <!-- 空状态 -->
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">🎲</div>
+                <div class="text-gray-600 dark:text-gray-400 text-lg mb-6">还没有人参与Roll点，快来成为第一个吧！</div>
+                <button 
+                    onclick="document.querySelector('form input').focus()" 
+                    class="px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors duration-300 shadow-md hover:shadow-lg"
+                >
+                    立即参与
+                </button>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="flex flex-col gap-6 justify-center mb-8">
+        <!-- 返回首页按钮 -->
+        <div class="flex justify-center">
+            <button 
+                onclick="window.location.href='/'" 
+                class="px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg"
+            >
+                返回首页
+            </button>
+        </div>
+        
+        <!-- 管理员功能 -->
+        {% if is_admin %}
+            <div class="glass-effect p-8 max-w-md mx-auto">
+                <h3 class="text-xl font-semibold mb-6 text-gray-800 dark:text-gray-200 text-center">管理员功能</h3>
+                <div class="flex flex-col sm:flex-row gap-6">
+                    <!-- 结束活动按钮 -->
+                    <form action="/admin/end_activity/{{ activity.id }}" method="post" onsubmit="return confirm('确定要结束此活动吗？结束后用户将无法再参与Roll点。')" class="flex-1">
+                        {% if activity.is_active %}
+                            <button 
+                                type="submit" 
+                                class="w-full py-3 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition-colors duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg"
+                            >
+                                结束活动
+                            </button>
+                        {% else %}
+                            <button 
+                                type="button" 
+                                disabled 
+                                class="w-full py-3 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium rounded-lg cursor-not-allowed"
+                            >
+                                活动已结束
+                            </button>
+                        {% endif %}
+                    </form>
+                    
+                    <!-- 删除活动按钮 -->
+                    <form action="/admin/delete_activity/{{ activity.id }}" method="post" onsubmit="return confirm('确定要删除此活动吗？此操作不可恢复。')" class="flex-1">
+                        <button 
+                            type="submit" 
+                            class="w-full py-3 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors duration-300 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-dark-bg"
+                        >
+                            删除活动
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/roll-animation.css">
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/websocket-client.js"></script>
+<script src="/static/js/roll-animation.js"></script>
+{% endblock %}

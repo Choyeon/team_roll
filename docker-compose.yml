@@ -1,0 +1,21 @@
+services:
+  team-roll:
+    build: .
+    image: team-roll:2.0
+    ports:
+      - "8803:8803"
+    environment:
+      DATABASE_URL: sqlite:////srv/team_roll/data/team_roll.db
+      ENVIRONMENT: prod
+      # 反代之后必须显式打开，否则日志与限流都按代理 IP 统计
+      TRUST_PROXY_HEADERS: "false"
+      # 首次启动用它建超级管理员，之后请登录改密并从环境变量移除
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env or the shell}
+    volumes:
+      - team-roll-data:/srv/team_roll/data
+    restart: unless-stopped
+
+volumes:
+  team-roll-data:

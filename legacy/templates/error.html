@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Team Roll - 错误{% endblock %}
+
+{% block extra_css %}
+<style>
+    .error-icon {
+        text-align: center;
+        font-size: 80px;
+        margin-bottom: 20px;
+        animation: errorPulse 1.5s ease-in-out infinite;
+        color: #ff3b30;
+    }
+    
+    @keyframes errorPulse {
+        0% {
+            transform: scale(1);
+            filter: drop-shadow(0 0 10px rgba(255, 59, 48, 0.5));
+        }
+        50% {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 20px rgba(255, 59, 48, 0.8));
+        }
+        100% {
+            transform: scale(1);
+            filter: drop-shadow(0 0 10px rgba(255, 59, 48, 0.5));
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="game-container" style="max-width: 600px; margin: 50px auto;">
+        <div class="error-container">
+            <div class="error-icon">❌</div>
+            <h1 class="game-title">出错了</h1>
+            <div class="error-message" style="background: rgba(255, 59, 48, 0.15); color: #ff3b30; padding: 20px; border-radius: 12px; margin-bottom: 30px; text-align: center; font-size: 18px; border: 1px solid rgba(255, 59, 48, 0.3); box-shadow: 0 2px 8px rgba(255, 59, 48, 0.1); backdrop-filter: blur(5px);">
+                {{ error_message }}
+            </div>
+            <div class="game-action-buttons">
+                <button class="game-btn game-btn-primary" onclick="window.location.href='/'">返回首页</button>
+                {% if activity_id %}
+                    <button class="game-btn game-btn-secondary" onclick="window.history.back()">返回上一页</button>
+                {% endif %}
+            </div>
+        </div>
+{% endblock %}

@@ -1,0 +1,16 @@
+__pycache__/
+*.py[oc]
+.venv/
+venv/
+tests/
+.env
+.env.*
+*.db
+*.db-shm
+*.db-wal
+*.bak
+.git/
+.gitignore
+Dockerfile
+docker-compose.yml
+README.md

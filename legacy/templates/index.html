@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Team Roll - 首页{% endblock %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto">
+    <!-- 标题 -->
+    <h1 class="text-3xl md:text-4xl font-bold text-primary mb-8 text-center">团队Roll点活动</h1>
+    
+    <!-- 活动列表 -->
+    {% if activities %}
+        <div class="mb-12">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200">当前活动</h2>
+            <ul class="space-y-4">
+                {% for activity in activities %}
+                    <li class="glass-effect p-6 cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+                        <div onclick="window.location.href='/activity/{{ activity.id }}'">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">{{ activity.name }}</h3>
+                            <p class="text-gray-600 dark:text-gray-400 mb-4">{{ activity.description }}</p>
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                                <span class="text-sm text-gray-500 dark:text-gray-400">创建时间: {{ activity.created_at[:10] }}</span>
+                                {% if activity.is_active %}
+                                    <span class="px-4 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm font-medium">进行中</span>
+                                {% else %}
+                                    <span class="px-4 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-sm font-medium">已结束</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <!-- 空状态 -->
+        <div class="glass-effect p-12 text-center">
+            <div class="text-6xl mb-4">🎲</div>
+            <div class="text-gray-600 dark:text-gray-400 text-lg mb-6">暂无活动，请管理员创建新活动。</div>
+            <button 
+                class="px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors duration-300 shadow-md hover:shadow-lg"
+                onclick="window.location.href='/admin/login'"
+            >
+                管理员登录
+            </button>
+        </div>
+    {% endif %}
+    
+    <!-- 操作按钮 -->
+    <div class="flex justify-center mb-8">
+        <button 
+            class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300 shadow-sm hover:shadow-md"
+            onclick="window.location.href='/admin/login'"
+        >
+            管理活动
+        </button>
+    </div>
+</section>
+{% endblock %}

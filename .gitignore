@@ -1,0 +1,24 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+venv/
+
+# 本地密钥与运行时数据，绝不入库
+.env
+.env.local
+*.db
+*.db-shm
+*.db-wal
+*.bak
+
+# 工具缓存
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
