@@ -64,6 +64,8 @@
   display: grid;
   gap: var(--space-4);
   justify-items: center;
+  overflow: hidden;
+  position: relative;
   text-align: center;
 }
 
@@ -81,23 +83,205 @@
   min-height: 6.5rem;
   padding: var(--space-4) var(--space-6);
   place-items: center;
+  position: relative;
   width: 100%;
 }
 
+/* 转动途中只留一圈呼吸的微光，颜色要等数字停稳才揭晓。 */
 .rollbox__display[data-state="spinning"] {
+  animation: suspense 900ms var(--ease) infinite;
+  border-color: var(--border-strong);
   color: var(--text-muted);
 }
 
 .rollbox__display[data-state="revealed"] {
-  animation: pop var(--dur) var(--ease);
-  border-color: var(--brand);
-  color: var(--brand);
+  background: var(--tier-soft, var(--brand-soft));
+  border-color: var(--tier, var(--brand));
+  box-shadow: 0 0 0 1px var(--tier, var(--brand)), 0 12px 36px -14px var(--tier, var(--brand));
+  color: var(--tier, var(--brand));
 }
 
-@keyframes pop {
-  from {
-    transform: scale(0.9);
+.rollbox__display[data-state="revealed"]::after {
+  animation: ring-out 640ms var(--ease) forwards;
+  border: 2px solid var(--tier, var(--brand));
+  border-radius: inherit;
+  content: "";
+  inset: -3px;
+  pointer-events: none;
+  position: absolute;
+}
+
+@keyframes suspense {
+  0%,
+  100% {
+    box-shadow: inset 0 0 2rem -0.9rem transparent;
   }
+  50% {
+    box-shadow: inset 0 0 2.2rem -0.5rem light-dark(rgb(79 70 229 / 0.45), rgb(139 135 255 / 0.5));
+  }
+}
+
+@keyframes ring-out {
+  from {
+    opacity: 1;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.07);
+  }
+}
+
+/* 落定：先弹一下，高档位再左右抖，抖动幅度由档位自己带。 */
+.rollbox__display[data-state="revealed"] .reels,
+.rollbox__display[data-state="revealed"] .reveal {
+  animation: land 540ms var(--ease);
+  text-shadow: 0 0 0.32em color-mix(in srgb, var(--tier, var(--brand)) 45%, transparent);
+}
+
+@keyframes land {
+  0% {
+    transform: scale(0.7);
+  }
+  30% {
+    transform: scale(1.08);
+  }
+  46% {
+    transform: translateX(calc(var(--jolt, 0px) * -1)) scale(1);
+  }
+  62% {
+    transform: translateX(var(--jolt, 0px)) scale(1);
+  }
+  78% {
+    transform: translateX(calc(var(--jolt, 0px) * -0.35)) scale(1);
+  }
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* --- 开奖档位：数字、边框、光晕共用 --tier，排行榜读同一组变量 --- */
+
+[data-tier="white"] {
+  --jolt: 0px;
+  --tier: light-dark(#7b849c, #eef1ff);
+  --tier-soft: light-dark(#eceff8, #2b2f42);
+}
+
+[data-tier="blue"] {
+  --jolt: 0px;
+  --tier: light-dark(#2563eb, #7fc4f2);
+  --tier-soft: light-dark(#dbeafe, #1b2f42);
+}
+
+[data-tier="purple"] {
+  --jolt: 1px;
+  --tier: light-dark(#7c3aed, #b9a6ff);
+  --tier-soft: light-dark(#e9e2fd, #2c2750);
+}
+
+[data-tier="pink"] {
+  --jolt: 2px;
+  --tier: light-dark(#db2777, #f286c8);
+  --tier-soft: light-dark(#fce7f3, #40203a);
+}
+
+[data-tier="gold"] {
+  --jolt: 3px;
+  --tier: light-dark(#a16207, #f5c56a);
+  --tier-soft: light-dark(#fef3c7, #3a2f18);
+}
+
+[data-tier="red"] {
+  --jolt: 5px;
+  --tier: light-dark(#dc2626, #f78f8f);
+  --tier-soft: light-dark(#fee2e2, #3d2021);
+}
+
+[data-tier="rainbow"] {
+  --jolt: 7px;
+  --tier: light-dark(#c026d3, #f0abfc);
+  --tier-soft: light-dark(#fae8ff, #3a1f42);
+}
+
+/* 七彩档让数字自己转色相，比一张静态渐变更像头奖。 */
+.rollbox__display[data-tier="rainbow"][data-state="revealed"] .reels,
+.rollbox__display[data-tier="rainbow"][data-state="revealed"] .reveal {
+  animation: land 540ms var(--ease), hue-cycle 2.6s linear 320ms infinite;
+  color: #ff2d95;
+}
+
+@keyframes hue-cycle {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* --- 彩带粒子：挂载即撒一轮，动画自带 forwards 收尾 --- */
+
+.burst {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.burst__bit {
+  animation: ribbon var(--life) cubic-bezier(0.16, 0.7, 0.3, 1) var(--delay) forwards;
+  background: var(--c);
+  border-radius: 1px;
+  height: 3px;
+  left: 50%;
+  opacity: 0;
+  position: absolute;
+  top: 50%;
+  width: var(--w);
+}
+
+@keyframes ribbon {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.4);
+  }
+  45% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--mx)), calc(-50% + var(--my))) rotate(calc(var(--rot) * 0.55)) scale(1);
+  }
+  75% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(1);
+  }
+}
+
+.tier-legend {
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-2xs);
+  gap: var(--space-1) var(--space-3);
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tier-legend li {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.tier-legend__dot {
+  background: var(--tier);
+  border-radius: 50%;
+  height: 0.55rem;
+  width: 0.55rem;
+}
+
+.tier-legend li[data-tier="rainbow"] .tier-legend__dot {
+  background-image: conic-gradient(#ff3b3b, #ffae00, #35d07f, #2f9bff, #7b5cff, #ff3ba1, #ff3b3b);
 }
 
 .rollbox__range {
@@ -177,8 +361,16 @@
 }
 
 .board__number {
+  color: var(--tier, var(--text));
   font-family: var(--font-mono);
   font-weight: 700;
+}
+
+.board__row[data-tier="rainbow"] .board__number {
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-image: linear-gradient(90deg, #ff3b3b, #ffae00, #35d07f, #2f9bff, #7b5cff, #ff3ba1);
+  color: transparent;
 }
 
 .presence {

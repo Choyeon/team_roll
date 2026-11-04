@@ -7,6 +7,8 @@ import { STATUS_LABEL, dateTime, number, percent } from "../lib/format.js";
 import { openActivitySocket } from "../lib/ws.js";
 import { computed, defineComponent, onBeforeUnmount, onMounted, ref, watch } from "../lib/vue.js";
 import { NumberReel } from "../components/reel.js";
+import { RibbonBurst } from "../components/burst.js";
+import { BANDS, tierOf } from "../lib/tier.js";
 import { Busy, EmptyState, Pager, StatusPill } from "../components/ui.js";
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -160,7 +162,7 @@ export const HomeView = defineComponent({
 
 export const ActivityView = defineComponent({
   name: "ActivityView",
-  components: { Busy, NumberReel, StatusPill },
+  components: { Busy, NumberReel, RibbonBurst, StatusPill },
   setup() {
     const activity = ref(null);
     const rolls = ref([]);
@@ -171,6 +173,7 @@ export const ActivityView = defineComponent({
     const rolling = ref(false);
     const reeling = ref(false);
     const rollSeq = ref(0);
+    const burst = ref(0);
     const reelTarget = ref("");
     const display = ref("");
     const mine = ref(null);
@@ -190,6 +193,16 @@ export const ActivityView = defineComponent({
       if (rolling.value) return "spinning";
       return display.value || reelTarget.value ? "revealed" : "idle";
     });
+    // 档位只在停稳后亮起来，转动途中泄色就没有开奖的悬念了。
+    const revealTier = computed(() => {
+      if (rolling.value || !display.value || !activity.value) return null;
+      return tierOf(Number(display.value), activity.value.roll_min, activity.value.roll_max);
+    });
+    const rollTier = (value) => {
+      if (!activity.value) return null;
+      const tier = tierOf(value, activity.value.roll_min, activity.value.roll_max);
+      return tier ? tier.key : null;
+    };
     const canRoll = computed(() => activity.value && activity.value.status === "active" && !busy.value && !rolling.value);
     const slotsFull = computed(
       () => activity.value && activity.value.max_participants > 0
@@ -297,6 +310,7 @@ export const ActivityView = defineComponent({
       mine.value = null;
       display.value = "";
       reelTarget.value = "";
+      burst.value = 0;
       if (!reducedMotion) {
         // 每次开一轮新的滚轮：:key 变更会重挂载组件并从自由转动开始。
         rollSeq.value += 1;
@@ -324,9 +338,20 @@ export const ActivityView = defineComponent({
       }
     }
 
+    function fireBurst() {
+      if (reducedMotion) return;
+      burst.value += 1;
+      const seq = burst.value;
+      // 粒子动画自带 forwards，收尾只是把这几十个小元素从 DOM 里撤掉。
+      setTimeout(() => {
+        if (burst.value === seq) burst.value = 0;
+      }, 2200);
+    }
+
     function onLanded() {
       rolling.value = false;
       commitPending();
+      fireBurst();
     }
 
     function connect() {
@@ -355,16 +380,17 @@ export const ActivityView = defineComponent({
       reeling.value = false;
       rolling.value = false;
       reelTarget.value = "";
+      burst.value = 0;
       pending = null;
       load();
       connect();
     });
 
     return {
-      activity, rolls, loading, missing, name, busy, rolling, reeling, rollSeq, reelTarget,
-      display, mine, fresh, socketStatus, connections, range, reelDigits, displayState,
-      canRoll, blockReason, load, rollTheDice, onLanded,
-      STATUS_LABEL, dateTime, number, percent,
+      activity, rolls, loading, missing, name, busy, rolling, reeling, rollSeq, reelTarget, burst,
+      display, mine, fresh, socketStatus, connections, range, reelDigits, displayState, revealTier,
+      rollTier, canRoll, blockReason, load, rollTheDice, onLanded,
+      BANDS, STATUS_LABEL, dateTime, number, percent,
     };
   },
   template: `
@@ -398,14 +424,24 @@ export const ActivityView = defineComponent({
 
         <div class="roll-hero">
           <section class="card rollbox" aria-label="Roll 点">
-            <div class="rollbox__display" :data-state="displayState" aria-live="polite" aria-atomic="true">
+            <div class="rollbox__display" :data-state="displayState"
+                 :data-tier="revealTier ? revealTier.key : null" aria-live="polite" aria-atomic="true">
               <NumberReel v-if="reeling" :key="rollSeq" :digits="reelDigits" :target="reelTarget"
                           :label="display" @landed="onLanded"/>
-              <template v-else>{{ display || (activity.roll_min + '-' + activity.roll_max) }}</template>
+              <span v-else class="reveal">{{ display || (activity.roll_min + '-' + activity.roll_max) }}</span>
+              <RibbonBurst v-if="burst && revealTier" :key="burst" :tier="revealTier.key"/>
             </div>
             <p class="rollbox__range" v-if="mine && !rolling">
-              {{ mine.name }} 的数值是 {{ number(mine.number) }}，当前排名第 {{ mine.rank }}
+              {{ mine.name }} 的数值是 {{ number(mine.number) }}<template v-if="revealTier">，
+              {{ revealTier.label }}档（区间 {{ revealTier.pct }}% 位）</template>，当前排名第 {{ mine.rank }}
             </p>
+            <ul class="tier-legend" aria-label="档位配色说明">
+              <li v-for="band in BANDS" :key="band.key" :data-tier="band.key">
+                <span class="tier-legend__dot" aria-hidden="true"></span>
+                {{ band.label }}
+                <span class="faint">{{ band.from }}-{{ band.to }}%</span>
+              </li>
+            </ul>
             <label class="field" style="width:100%">
               <span class="field__label">你的名字</span>
               <input id="player-name" class="input" v-model="name" maxlength="32" autocomplete="nickname"
@@ -432,7 +468,8 @@ export const ActivityView = defineComponent({
             </div>
             <div class="board card__body">
               <ol class="board__list">
-                <li v-for="roll in rolls" :key="roll.id" class="board__row" :data-new="fresh === roll.id">
+                <li v-for="roll in rolls" :key="roll.id" class="board__row" :data-new="fresh === roll.id"
+                    :data-tier="rollTier(roll.number)">
                   <span class="board__rank">#{{ roll.rank }}</span>
                   <span class="truncate">{{ roll.name }}</span>
                   <span class="board__number">{{ number(roll.number) }}</span>

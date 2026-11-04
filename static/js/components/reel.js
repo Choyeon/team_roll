@@ -6,6 +6,7 @@ import { defineComponent, onBeforeUnmount, onMounted, ref, watch } from "../lib/
 const STRIP = 20; // two 0-9 cycles so wrap-around and recoil stay inside the strip
 const SPIN_DIGITS_PER_S = 12; // base free-spin speed, nudged per reel so they desync
 const DELAY_MS = 170; // extra spin each successive reel gets before it starts braking
+const EXTRA_HOLD_MS = 150; // suspense beat held on the final reel before it settles
 const SETTLE_MS = 560;
 const RECOIL_MS = 260;
 const RECOIL_DIGITS = 0.14;
@@ -55,11 +56,13 @@ export const NumberReel = defineComponent({
       clearTimer();
       landed.value = false;
       const now = performance.now();
+      const last = props.digits - 1;
       reels.value = Array.from({ length: props.digits }, (_, i) => ({
         from: Math.random() * STRIP,
         speed: SPIN_DIGITS_PER_S + i * 1.1,
         at: now,
-        delay: i * DELAY_MS,
+        // 末位多憋半拍，停稳前那一下等待才是摇奖的感觉。
+        delay: i * DELAY_MS + (i === last && last > 0 ? EXTRA_HOLD_MS : 0),
         pos0: 0,
         to: 0,
         settleAt: 0,
