@@ -12,6 +12,13 @@ body {
   padding: 0;
 }
 
+html {
+  /* iOS 横屏会把正文字号自己放大一遍，这里统一按我们的字阶来。 */
+  -webkit-text-size-adjust: 100%;
+  /* 顶部栏是 sticky 的，锚点跳转要给标题留出空间。 */
+  scroll-padding-top: calc(var(--space-4) + 3.5rem);
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -19,7 +26,10 @@ body {
   font-size: var(--text-base);
   line-height: 1.55;
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-wrap: break-word;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 h1,
@@ -121,7 +131,8 @@ ol {
 .page {
   margin: 0 auto;
   max-width: 78rem;
-  padding: var(--space-5) var(--space-4) var(--space-7);
+  padding: var(--space-5) calc(var(--gutter) + var(--safe-r)) calc(var(--space-7) + var(--safe-b))
+    calc(var(--gutter) + var(--safe-l));
 }
 
 .page--narrow {
@@ -130,12 +141,33 @@ ol {
 
 .stack {
   display: grid;
-  gap: var(--space-4);
+  gap: clamp(var(--space-4), 1rem + 0.6vw, var(--space-5));
 }
 
 .stack-tight {
   display: grid;
   gap: var(--space-2);
+}
+
+/* 间距交给 gap 管，直接子元素的上下边距一律抹掉，否则标题会自己再撑一段。
+   同时允许它们收缩：网格/弹性项的默认最小宽度是内容的最小宽度，
+   一个长下拉框就能把整列顶出屏幕，所以 min-width 也要一起归零。 */
+.stack > *,
+.stack-tight > *,
+.row > *,
+.card__head > *,
+.card__foot > * {
+  margin-block: 0;
+  min-width: 0;
+}
+
+.field > *,
+.filters > *,
+.export-grid > *,
+.kpi-grid > *,
+.grid-cards > *,
+.grid-2 > * {
+  min-width: 0;
 }
 
 .row {
@@ -153,20 +185,31 @@ ol {
   justify-content: flex-end;
 }
 
+.row--center {
+  justify-content: center;
+}
+
+/* min(…, 100%) 让窄屏上单个格子先占满，避免 auto-fit 的最小宽度把页面顶出横向滚动。 */
 .grid-cards {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
 }
 
 .grid-2 {
   display: grid;
-  gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: clamp(var(--space-4), 1rem + 0.6vw, var(--space-5));
+  grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
 }
 
 .spacer {
   flex: 1 1 auto;
+}
+
+.list-reset {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .muted {
@@ -183,6 +226,14 @@ ol {
 
 .nowrap {
   white-space: nowrap;
+}
+
+.text-sm {
+  font-size: var(--text-sm);
+}
+
+.text-xs {
+  font-size: var(--text-xs);
 }
 
 .truncate {

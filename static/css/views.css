@@ -6,7 +6,7 @@
   background: linear-gradient(160deg, var(--brand-soft), var(--bg-elevated) 65%);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: var(--space-6) var(--space-5);
+  padding: clamp(var(--space-5), 1rem + 3vw, var(--space-7)) clamp(var(--space-4), 0.7rem + 2vw, var(--space-6));
 }
 
 .hero__title {
@@ -19,22 +19,51 @@
   max-width: 46rem;
 }
 
+/* 窄屏上标签页自己占一行，计数和搜索框占满第二行，搜索框跟着拉伸。 */
+@media (max-width: 48rem) {
+  .list-toolbar > .row {
+    flex: 1 1 auto;
+    justify-content: space-between;
+  }
+}
+
 .activity-card {
   display: grid;
   gap: var(--space-3);
   transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 
-.activity-card:hover {
-  border-color: var(--brand);
-  transform: translateY(-2px);
+.activity-card > * {
+  margin-block: 0;
+}
+
+/* 触屏没有真正的悬停，抬起和描边只在能悬停的设备上做。 */
+@media (hover: hover) {
+  .activity-card:hover {
+    border-color: var(--brand);
+    transform: translateY(-2px);
+  }
 }
 
 .activity-card__head {
   align-items: flex-start;
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   justify-content: space-between;
+}
+
+.activity-card__head h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  min-width: 0;
+}
+
+.activity-card__head h2 a {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .activity-card__meta {
@@ -42,14 +71,17 @@
   display: flex;
   flex-wrap: wrap;
   font-size: var(--text-xs);
-  gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 /* --- activity / roll page --- */
 
 .roll-hero {
   display: grid;
-  gap: var(--space-5);
+  gap: clamp(var(--space-4), 0.8rem + 1.6vw, var(--space-5));
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
 }
 
@@ -68,14 +100,26 @@
   overflow: hidden;
   position: sticky;
   text-align: center;
-  top: var(--space-5);
+  top: calc(var(--space-4) + 4rem);
 }
 
 /* 榜单可能拉到很长，开奖框跟着页面滚到这儿就停住，数字一直在眼前。 */
 @media (max-width: 62rem) {
   .rollbox {
     position: static;
+    top: auto;
   }
+}
+
+/* 开奖框里的表单和按钮铺满整格，手机上不用瞄准。
+   开奖数字居中，但字段标签跟着输入框左对齐，别悬在中间。 */
+.rollbox .field,
+.rollbox .btn--roll {
+  width: 100%;
+}
+
+.rollbox .field {
+  text-align: start;
 }
 
 .rollbox[data-quake="true"] {
@@ -107,13 +151,13 @@
   border-radius: var(--radius-lg);
   display: grid;
   font-family: var(--font-mono);
-  font-size: clamp(3rem, 11vw, 6rem);
+  font-size: clamp(2.75rem, 1.6rem + 6vw, 6rem);
   font-weight: 700;
   justify-items: center;
   letter-spacing: 0.02em;
   line-height: 1;
-  min-height: 6.5rem;
-  padding: var(--space-4) var(--space-6);
+  min-height: clamp(5.5rem, 4rem + 7vw, 7.5rem);
+  padding: var(--space-4) clamp(var(--space-4), 2vw, var(--space-6));
   place-items: center;
   position: relative;
   width: 100%;
@@ -449,6 +493,15 @@
   background: var(--bg-subtle);
 }
 
+/* 手机上名次栏收窄，行距压住，一屏能多看几条。 */
+@media (max-width: 48rem) {
+  .board__row {
+    gap: var(--space-2);
+    grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+    padding: var(--space-2);
+  }
+}
+
 .board__row[data-new="true"] {
   animation: flash 1.6s var(--ease);
 }
@@ -494,13 +547,20 @@
 /* --- admin shell --- */
 
 .admin {
-  display: grid;
-  gap: var(--space-5);
-  grid-template-columns: 14rem minmax(0, 1fr);
   align-items: start;
+  display: grid;
+  gap: clamp(var(--space-4), 0.8rem + 1.6vw, var(--space-5));
+  grid-template-columns: 14rem minmax(0, 1fr);
+  /* 后台自己就是页面容器，左右留白和最大宽度要跟前台 .page 对齐，
+     否则窄屏上标题会直接贴到屏幕边。 */
+  margin-inline: auto;
+  max-width: 78rem;
+  padding: var(--space-4) calc(var(--gutter) + var(--safe-r)) calc(var(--space-7) + var(--safe-b))
+    calc(var(--gutter) + var(--safe-l));
 }
 
-@media (max-width: 56rem) {
+/* 平板竖屏起改成上导航 + 下内容，导航横向滑动而不是挤成两行。 */
+@media (max-width: 62rem) {
   .admin {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -515,14 +575,25 @@
   gap: var(--space-1);
   padding: var(--space-2);
   position: sticky;
-  top: var(--space-5);
+  top: calc(var(--space-4) + 4rem);
 }
 
-@media (max-width: 56rem) {
+@media (max-width: 62rem) {
   .admin__nav {
     display: flex;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
     position: static;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin__nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin__nav a {
+    scroll-snap-align: start;
   }
 }
 
@@ -533,10 +604,18 @@
   font-size: var(--text-sm);
   font-weight: 600;
   gap: var(--space-2);
+  min-height: 2.25rem;
   padding: var(--space-2) var(--space-3);
+  scroll-snap-align: start;
   text-decoration: none;
   white-space: nowrap;
   transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+@media (pointer: coarse) {
+  .admin__nav a {
+    min-height: var(--touch);
+  }
 }
 
 .admin__nav a:hover {
@@ -559,9 +638,38 @@
   align-items: flex-end;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-3) var(--space-4);
   justify-content: space-between;
   margin-bottom: var(--space-4);
+}
+
+.page-head h1,
+.page-head p {
+  margin: 0;
+}
+
+/* 窄屏下标题一行、操作一行，按钮跟着铺满，不挤在标题右下角。 */
+@media (max-width: 48rem) {
+  .page-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-head > .row {
+    justify-content: space-between;
+  }
+
+  /* 主操作铺满，返回类的幽灵按钮保持胶囊宽度，
+     否则透明底被拉成一整行，看着像一句居中的正文。 */
+  .page-head > .row > .btn:not(.btn--ghost),
+  .page-head > .row > .field {
+    flex: 1 1 auto;
+  }
+
+  /* 直接挂在标题区的返回类按钮保持胶囊宽度，别被 stretch 拉成整行。 */
+  .page-head > .btn {
+    align-self: flex-start;
+  }
 }
 
 /* --- charts (hand-written SVG) --- */
@@ -599,16 +707,39 @@
   fill: var(--chart-4);
 }
 
-.chart__axis {
+/* SVG 里的字号跟着 viewBox 一起缩放，窄屏上会缩到看不清，
+   所以按屏幕宽度反向抬高一档，渲染出来才还是 9px 上下。 */
+.chart__axis,
+.chart__value {
   fill: var(--text-faint);
-  font-size: 9px;
   font-family: var(--font-mono);
+  font-size: 10px;
 }
 
 .chart__value {
   fill: var(--text-muted);
-  font-size: 9px;
+}
+
+@media (max-width: 62rem) {
+  .chart__axis,
+  .chart__value {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 48rem) {
+  .chart__axis,
+  .chart__value {
+    font-size: 18px;
+  }
+}
+
+/* 圆心的总数不参与上面的反向缩放：viewBox 固定 120，13 个单位在 9rem 的圆上刚好 15px 上下。 */
+.chart__center {
+  fill: var(--text);
   font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .donut__segment {
@@ -636,16 +767,64 @@
   width: 0.6rem;
 }
 
+/* 环形图和图例并排；窄屏上图例自己换行，图不缩小。 */
+.donut {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.donut > svg {
+  flex: 0 0 auto;
+  max-width: 9rem;
+}
+
+.legend--stack {
+  align-items: stretch;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.legend--start {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+/* 系统状态里的键值对：宽屏多列铺开，窄屏自动收到两列、一列。 */
+.defs {
+  display: grid;
+  gap: var(--space-2) var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+  margin: 0;
+}
+
+.defs > div {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+
+.defs dt {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.defs dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
 .kpi-grid {
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(10.5rem, 100%), 1fr));
 }
 
 /* --- login --- */
 
 .login-card {
-  margin: var(--space-7) auto 0;
+  margin: clamp(var(--space-5), 10vh, var(--space-7)) auto 0;
   max-width: 25rem;
 }
 
@@ -653,20 +832,31 @@
 
 .export-grid {
   display: grid;
-  gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: clamp(var(--space-3), 0.6rem + 1.4vw, var(--space-4));
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
 }
 
 .audit-detail {
   background: var(--bg-subtle);
   border-radius: var(--radius-sm);
-  display: inline-block;
+  display: block;
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
-  margin: 0;
+  margin: var(--space-1) 0 0;
   max-width: 24rem;
   overflow-x: auto;
   padding: var(--space-1) var(--space-2);
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+/* 卡片档里详情块跟着整行铺满，不再限死 24rem。 */
+@media (max-width: 48rem) {
+  .audit-detail {
+    max-width: 100%;
+  }
+
+  .table details {
+    width: 100%;
+  }
 }

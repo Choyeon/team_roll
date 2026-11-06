@@ -116,8 +116,8 @@ export const DashboardView = defineComponent({
     <section class="admin__section stack">
       <div class="page-head">
         <div>
-          <h1 style="margin:0">仪表盘</h1>
-          <p class="muted" style="margin:0">汇总 Roll 点活动、参与度与实时连接。</p>
+          <h1>仪表盘</h1>
+          <p class="muted">汇总 Roll 点活动、参与度与实时连接。</p>
         </div>
         <div class="row">
           <label class="field">
@@ -180,16 +180,16 @@ export const DashboardView = defineComponent({
 
         <div class="grid-2">
           <div class="card card--pad-none">
-            <div class="card__head"><h2 style="margin:0;font-size:var(--text-lg)">最新 Roll 记录</h2></div>
+            <div class="card__head"><h2>最新 Roll 记录</h2></div>
             <div class="table-wrap">
               <table class="table">
                 <thead><tr><th>时间</th><th>玩家</th><th class="num">数值</th><th>活动</th></tr></thead>
                 <tbody>
                   <tr v-for="roll in data.recent_rolls" :key="roll.id">
-                    <td class="nowrap">{{ dateTime(roll.timestamp) }}</td>
-                    <td>{{ roll.name }}</td>
-                    <td class="num">{{ number(roll.number) }}</td>
-                    <td><a :href="'/activity/' + roll.activity_id" data-link class="truncate" style="display:inline-block;max-width:12rem">{{ roll.activity_name }}</a></td>
+                    <td data-label="时间" class="nowrap">{{ dateTime(roll.timestamp) }}</td>
+                    <td data-label="玩家">{{ roll.name }}</td>
+                    <td data-label="数值" class="num">{{ number(roll.number) }}</td>
+                    <td data-label="活动"><a :href="'/activity/' + roll.activity_id" data-link class="truncate cell-link">{{ roll.activity_name }}</a></td>
                   </tr>
                 </tbody>
               </table>
@@ -197,16 +197,16 @@ export const DashboardView = defineComponent({
             </div>
           </div>
           <div class="card card--pad-none">
-            <div class="card__head"><h2 style="margin:0;font-size:var(--text-lg)">最新管理操作</h2></div>
+            <div class="card__head"><h2>最新管理操作</h2></div>
             <div class="table-wrap">
               <table class="table">
-                <thead><tr><th>时间</th><th>操作</th><th>管理员</th><th>对象</th></tr></thead>
+                <thead><tr><th>时间</th><th>操作</th><th>管理员</th><th class="is-secondary">对象</th></tr></thead>
                 <tbody>
                   <tr v-for="row in data.recent_audit" :key="row.id">
-                    <td class="nowrap">{{ dateTime(row.created_at) }}</td>
-                    <td class="mono">{{ row.action }}</td>
-                    <td>{{ row.actor_label }}</td>
-                    <td class="mono faint">{{ row.target_id || '—' }}</td>
+                    <td data-label="时间" class="nowrap">{{ dateTime(row.created_at) }}</td>
+                    <td data-label="操作" class="mono">{{ row.action }}</td>
+                    <td data-label="管理员">{{ row.actor_label }}</td>
+                    <td data-label="对象" class="is-secondary mono faint">{{ row.target_id || '—' }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -262,8 +262,8 @@ export const ActivitiesView = defineComponent({
     <section class="admin__section stack">
       <div class="page-head">
         <div>
-          <h1 style="margin:0">活动管理</h1>
-          <p class="muted" style="margin:0">创建、调整规则、暂停/结束活动，或删除整份 Roll 历史。</p>
+          <h1>活动管理</h1>
+          <p class="muted">创建、调整规则、暂停/结束活动，或删除整份 Roll 历史。</p>
         </div>
         <a v-if="can('manage')" class="btn btn--primary" href="/admin/activities/new" data-link>新建活动</a>
       </div>
@@ -278,7 +278,7 @@ export const ActivitiesView = defineComponent({
             <option value="ended">已结束</option>
           </select>
         </label>
-        <label class="field" style="flex:1 1 12rem">
+        <label class="field">
           <span class="field__label">关键词</span>
           <input class="input" v-model="q" type="search" placeholder="名称 / 描述 / ID" @keyup.enter="load(1)">
         </label>
@@ -293,24 +293,24 @@ export const ActivitiesView = defineComponent({
             <thead>
               <tr>
                 <th>活动</th><th>状态</th><th class="num">区间</th><th class="num">有效</th>
-                <th class="num">作废</th><th class="num">人数</th><th class="num">最高</th><th class="num">完成度</th>
-                <th>创建</th><th></th>
+                <th class="num is-secondary">作废</th><th class="num">人数</th><th class="num">最高</th><th class="num">完成度</th>
+                <th class="is-secondary">创建</th><th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="activity in items" :key="activity.id">
-                <td>
+                <td data-label="活动" class="multi">
                   <a :href="'/activity/' + activity.id" data-link class="strong">{{ activity.name }}</a>
-                  <div class="faint mono" style="font-size:var(--text-2xs)">{{ activity.id }}</div>
+                  <span class="cell-sub mono">{{ activity.id }}</span>
                 </td>
-                <td><StatusPill :value="activity.status" :label="STATUS_LABEL[activity.status]"/></td>
-                <td class="num">{{ number(activity.roll_min) }}-{{ number(activity.roll_max) }}</td>
-                <td class="num">{{ number(activity.roll_count) }}</td>
-                <td class="num">{{ number(activity.void_count) }}</td>
-                <td class="num">{{ number(activity.participants) }}<span v-if="activity.max_participants" class="faint">/{{ number(activity.max_participants) }}</span></td>
-                <td class="num">{{ activity.top_number ?? '—' }}</td>
-                <td class="num">{{ percent(activity.roll_count / (activity.roll_max - activity.roll_min + 1)) }}</td>
-                <td class="nowrap">{{ activity.created_by || '—' }}<div class="faint">{{ dateTime(activity.created_at) }}</div></td>
+                <td data-label="状态"><StatusPill :value="activity.status" :label="STATUS_LABEL[activity.status]"/></td>
+                <td data-label="区间" class="num">{{ number(activity.roll_min) }}-{{ number(activity.roll_max) }}</td>
+                <td data-label="有效" class="num">{{ number(activity.roll_count) }}</td>
+                <td data-label="作废" class="num is-secondary">{{ number(activity.void_count) }}</td>
+                <td data-label="人数" class="num">{{ number(activity.participants) }}<span v-if="activity.max_participants" class="faint">/{{ number(activity.max_participants) }}</span></td>
+                <td data-label="最高" class="num">{{ activity.top_number ?? '—' }}</td>
+                <td data-label="完成度" class="num">{{ percent(activity.roll_count / (activity.roll_max - activity.roll_min + 1)) }}</td>
+                <td data-label="创建" class="multi is-secondary nowrap">{{ activity.created_by || '—' }}<span class="cell-sub">{{ dateTime(activity.created_at) }}</span></td>
                 <td>
                   <div class="table__actions" v-if="can('manage')">
                     <a class="btn btn--sm" :href="'/admin/activities/' + activity.id + '/edit'" data-link>编辑</a>
@@ -414,8 +414,8 @@ export const ActivityFormView = defineComponent({
       <section class="admin__section stack">
         <div class="page-head">
           <div>
-            <h1 style="margin:0">{{ isEdit ? '编辑活动' : '新建活动' }}</h1>
-            <p class="muted" style="margin:0">
+            <h1>{{ isEdit ? '编辑活动' : '新建活动' }}</h1>
+            <p class="muted">
               <template v-if="current">
                 {{ current.name }} · {{ STATUS_LABEL[current.status] }} ·
                 已有 {{ number(current.roll_count) }} 条有效数值、{{ number(current.participants) }} 人参与
@@ -465,7 +465,7 @@ export const ActivityFormView = defineComponent({
             </label>
           </div>
 
-          <p class="faint" style="font-size:var(--text-xs);margin:0">
+          <p class="faint text-xs">
             收窄区间时，若已有数值落在新范围外会被拒绝；先作废这些记录再保存。
             调低人数上限不会踢掉已经在榜的人，只是不再放新人进来。
           </p>
@@ -595,14 +595,14 @@ export const RollsView = defineComponent({
     <section class="admin__section stack">
       <div class="page-head">
         <div>
-          <h1 style="margin:0">Roll 记录</h1>
-          <p class="muted" style="margin:0">这里可以作废、恢复、改名、改数值，或直接删除单条记录。</p>
+          <h1>Roll 记录</h1>
+          <p class="muted">这里可以作废、恢复、改名、改数值，或直接删除单条记录。</p>
         </div>
         <button v-if="can('manage') && activityId" class="btn btn--primary" type="button" @click="openAdd">补录记录</button>
       </div>
 
       <div class="filters card">
-        <label class="field" style="flex:1 1 16rem">
+        <label class="field field--wide">
           <span class="field__label">活动</span>
           <select id="r-activity" class="select" v-model="activityId" @change="select">
             <option value="" disabled>请选择活动</option>
@@ -639,21 +639,21 @@ export const RollsView = defineComponent({
             <thead>
               <tr>
                 <th class="num">排名</th><th>玩家</th><th class="num">数值</th><th>状态</th>
-                <th>时间</th><th>IP / 浏览器</th><th>备注</th><th></th>
+                <th>时间</th><th>来源</th><th class="is-secondary">备注</th><th></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="roll in rolls" :key="roll.id">
-                <td class="num">{{ roll.rank || '—' }}</td>
-                <td>{{ roll.name }}</td>
-                <td class="num strong">{{ number(roll.number) }}</td>
-                <td><StatusPill :value="roll.status" :label="ROLL_STATUS_LABEL[roll.status]"/></td>
-                <td class="nowrap">{{ dateTime(roll.timestamp) }}</td>
-                <td class="mono faint">{{ roll.ip || '—' }}
-                  <div class="truncate" style="font-size:var(--text-2xs);max-width:22rem"
-                       :title="roll.user_agent">{{ roll.user_agent || '' }}</div>
+                <td data-label="排名" class="num">{{ roll.rank || '—' }}</td>
+                <td data-label="玩家">{{ roll.name }}</td>
+                <td data-label="数值" class="num strong">{{ number(roll.number) }}</td>
+                <td data-label="状态"><StatusPill :value="roll.status" :label="ROLL_STATUS_LABEL[roll.status]"/></td>
+                <td data-label="时间" class="nowrap">{{ dateTime(roll.timestamp) }}</td>
+                <td data-label="来源" class="multi">
+                  <span class="mono faint">{{ roll.ip || '—' }}</span>
+                  <span class="cell-sub cell-sub--wide truncate" :title="roll.user_agent">{{ roll.user_agent || '' }}</span>
                 </td>
-                <td class="faint">{{ roll.void_reason || (roll.created_by ? '由 ' + roll.created_by + ' 补录' : '') }}</td>
+                <td data-label="备注" class="is-secondary faint">{{ roll.void_reason || (roll.created_by ? '由 ' + roll.created_by + ' 补录' : '') }}</td>
                 <td>
                   <div class="table__actions" v-if="can('manage')">
                     <button v-if="roll.status === 'valid'" class="btn btn--sm" type="button" @click="openEdit(roll)">修改</button>
@@ -686,7 +686,7 @@ export const RollsView = defineComponent({
               <input id="e-reason" class="input" v-model="editing.reason" maxlength="200">
             </label>
           </div>
-          <p class="faint" style="font-size:var(--text-xs);margin:0">
+          <p class="faint text-xs">
             数值需落在 {{ activity ? activity.roll_min + '-' + activity.roll_max : '活动区间' }} 内，且不能与其他有效记录重复。
           </p>
         </div>
@@ -698,7 +698,7 @@ export const RollsView = defineComponent({
 
       <AppModal v-if="voiding" title="作废记录" @close="voiding = null">
         <div class="stack">
-          <p class="muted" style="margin:0">作废「{{ voiding.name }}」的数值 {{ voiding.number }}，该数值会重新开放给其他人 Roll。</p>
+          <p class="muted">作废「{{ voiding.name }}」的数值 {{ voiding.number }}，该数值会重新开放给其他人 Roll。</p>
           <label class="field">
             <span class="field__label">作废原因</span>
             <input id="v-reason" class="input" v-model="voiding.reason" maxlength="200" placeholder="例如：重复提交">

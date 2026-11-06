@@ -103,8 +103,8 @@ export const HomeView = defineComponent({
     <div class="page stack">
       <section class="hero stack-tight">
         <h1 class="hero__title">团队 Roll 点</h1>
-        <p class="hero__lead">管理员建一个数值区间，队友在同一个页面各领一个不重复的随机数，结果按数值从高到低实时排行。
-          每人能 Roll 几次、能进多少人，都在活动规则里设；作废的数值会重新开放。</p>
+        <p class="hero__lead">管理员建一个数值区间，队友在同一个页面各领一个不重复的随机数，结果按数值从高到低实时排行。</p>
+        <p class="hero__lead">每人能 Roll 几次、能进多少人，都在活动规则里设；作废的数值会重新开放。</p>
         <div class="row" v-if="activeTotal">
           <button class="btn btn--primary" type="button" @click="showActive">
             参与进行中的活动 · {{ number(activeTotal) }}
@@ -112,14 +112,14 @@ export const HomeView = defineComponent({
         </div>
       </section>
 
-      <div class="row row--between">
+      <div class="row row--between list-toolbar">
         <div class="tabs" role="tablist" aria-label="按状态筛选">
           <button class="tab" role="tab" v-for="tab in [['', '全部'], ['active', '进行中'], ['paused', '已暂停'], ['ended', '已结束']]"
                   :key="tab[0]" type="button" :aria-current="status === tab[0]" @click="status = tab[0]; load(1)">{{ tab[1] }}</button>
         </div>
         <div class="row">
-          <span class="faint" aria-live="polite" style="font-size:var(--text-xs)">共 {{ number(meta.total) }} 个</span>
-          <label class="field" style="min-width:12rem">
+          <span class="faint text-xs" aria-live="polite">共 {{ number(meta.total) }} 个</span>
+          <label class="field field--search">
             <span class="sr-only">搜索活动</span>
             <input class="input" v-model="q" type="search" placeholder="搜索活动名称…" @input="search">
           </label>
@@ -136,13 +136,13 @@ export const HomeView = defineComponent({
       <div v-else class="grid-cards">
         <article v-for="activity in items" :key="activity.id" class="card activity-card">
           <div class="activity-card__head">
-            <h2 style="margin:0;font-size:var(--text-lg)">
+            <h2>
               <a :href="'/activity/' + activity.id" data-link>{{ activity.name }}</a>
             </h2>
             <StatusPill :value="activity.status" :label="STATUS_LABEL[activity.status]"/>
           </div>
-          <p v-if="activity.description" class="muted truncate" style="margin:0">{{ activity.description }}</p>
-          <ul class="activity-card__meta" style="margin:0;list-style:none;padding:0">
+          <p v-if="activity.description" class="muted truncate">{{ activity.description }}</p>
+          <ul class="activity-card__meta">
             <li>区间 {{ number(activity.roll_min) }}-{{ number(activity.roll_max) }}</li>
             <li>已 Roll {{ number(activity.roll_count) }}</li>
             <li>剩余 {{ number(activity.remaining_numbers) }}</li>
@@ -405,13 +405,13 @@ export const ActivityView = defineComponent({
       <div v-else-if="activity" class="stack">
         <RibbonBurst v-if="burst && revealTier" :key="burst" :tier="revealTier.key"/>
 
-        <header class="row row--between">
+        <header class="page-head">
           <div class="stack-tight">
             <div class="row">
-              <h1 style="margin:0">{{ activity.name }}</h1>
+              <h1>{{ activity.name }}</h1>
               <StatusPill :value="activity.status" :label="STATUS_LABEL[activity.status]"/>
             </div>
-            <p class="muted" style="margin:0">
+            <p class="muted">
               区间 {{ number(activity.roll_min) }}-{{ number(activity.roll_max) }} · 每人最多 {{ activity.max_participations }} 次 ·
               <template v-if="activity.max_participants">限 {{ number(activity.max_participants) }} 人 ·</template>
               创建于 {{ dateTime(activity.created_at) }}
@@ -420,7 +420,7 @@ export const ActivityView = defineComponent({
           <a class="btn btn--ghost" href="/" data-link>返回列表</a>
         </header>
 
-        <p v-if="activity.description" class="card muted" style="margin:0">{{ activity.description }}</p>
+        <p v-if="activity.description" class="card muted">{{ activity.description }}</p>
 
         <div v-if="blockReason" class="pill pill--paused" role="status">{{ blockReason }}</div>
 
@@ -435,7 +435,7 @@ export const ActivityView = defineComponent({
             <p class="rollbox__range" v-if="mine && !rolling">
               {{ mine.name }}：{{ number(mine.number) }}，当前第 {{ mine.rank }} 名
             </p>
-            <label class="field" style="width:100%">
+            <label class="field">
               <span class="field__label">你的名字</span>
               <input id="player-name" class="input" v-model="name" maxlength="32" autocomplete="nickname"
                      placeholder="队名/ID" @keyup.enter="canRoll && rollTheDice()">
@@ -444,7 +444,7 @@ export const ActivityView = defineComponent({
               <span v-if="busy" class="spinner" aria-hidden="true"></span>
               {{ busy ? 'Roll 中…' : (rolling ? '开奖中…' : (display ? '再 Roll 一次' : '开始 Roll 点')) }}
             </button>
-            <div class="row" style="justify-content:center;font-size:var(--text-xs)">
+            <div class="row row--center text-xs">
               <span class="presence">
                 <span class="dot" :class="socketStatus === 'online' ? 'dot--on' : 'dot--off'" aria-hidden="true"></span>
                 {{ socketStatus === 'online' ? '实时同步已连接' : '实时同步重连中' }} · 在线 {{ connections }} 人
@@ -454,8 +454,8 @@ export const ActivityView = defineComponent({
 
           <section class="card card--pad-none">
             <div class="card__head">
-              <h2 style="margin:0;font-size:var(--text-lg)">实时排行</h2>
-              <span class="muted" style="font-size:var(--text-xs)">
+              <h2>实时排行</h2>
+              <span class="muted text-xs">
                 {{ number(range.filled) }}/{{ number(range.size) }} 个数值已 Roll · {{ number(activity.participants) }} 人
               </span>
             </div>
@@ -468,7 +468,7 @@ export const ActivityView = defineComponent({
                   <span class="board__number">{{ number(roll.number) }}</span>
                 </li>
               </ol>
-              <p v-if="!rolls.length" class="muted center" style="padding:var(--space-5)">还没有人 Roll 点。</p>
+              <p v-if="!rolls.length" class="state">还没有人 Roll 点。</p>
             </div>
           </section>
         </div>
@@ -510,8 +510,8 @@ export const LoginView = defineComponent({
   template: `
     <div class="page page--narrow">
       <form class="card login-card stack" @submit.prevent="submit" aria-labelledby="login-title">
-        <h1 id="login-title" style="margin:0">管理员登录</h1>
-        <p class="muted" style="margin:0">登录后可查看仪表盘、管理活动与 Roll 记录。</p>
+        <h1 id="login-title">管理员登录</h1>
+        <p class="muted">登录后可查看仪表盘、管理活动与 Roll 记录。</p>
         <label class="field">
           <span class="field__label">用户名</span>
           <input id="username" class="input" v-model="username" autocomplete="username" required maxlength="64">
@@ -524,7 +524,7 @@ export const LoginView = defineComponent({
         <button class="btn btn--primary btn-block" type="submit" :disabled="busy">
           <span v-if="busy" class="spinner" aria-hidden="true"></span>{{ busy ? '登录中…' : '登录' }}
         </button>
-        <p class="faint" style="font-size:var(--text-xs);margin:0">连续输错密码会临时锁定账号。</p>
+        <p class="faint text-xs">连续输错密码会临时锁定账号。</p>
       </form>
     </div>`,
 });

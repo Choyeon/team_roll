@@ -61,7 +61,7 @@ const AppView = defineComponent({
   },
   template: `
     <header class="appbar">
-      <a class="appbar__brand" href="/" data-link>
+      <a class="appbar__brand" href="/" data-link aria-label="Team Roll">
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
           <path d="M12 2 3 6.5v11L12 22l9-4.5v-11L12 2Zm0 2.3 6.4 3.2-6.4 3.2-6.4-3.2L12 4.3ZM5 9.2l6 3v6.3l-6-3V9.2Zm8 9.3v-6.3l6-3v6.3l-6 3Z"/>
         </svg>
@@ -76,7 +76,7 @@ const AppView = defineComponent({
           {{ themeLabel }}
         </button>
         <template v-if="store.auth === 'authed'">
-          <span class="muted" style="font-size:var(--text-sm)">{{ store.me.display_name || store.me.username }}</span>
+          <span class="appbar__name">{{ store.me.display_name || store.me.username }}</span>
           <button class="btn btn--sm" type="button" @click="signOut">退出</button>
         </template>
         <a v-else-if="store.auth === 'anon'" class="btn btn--primary btn--sm" href="/login" data-link>管理员登录</a>
@@ -86,7 +86,7 @@ const AppView = defineComponent({
       <component v-if="route" :is="route.view" :key="'view' + route.name + (route.params.activity_id || route.params.section || '')"/>
       <NotFoundView v-else/>
     </main>
-    <footer class="page center faint" style="font-size:var(--text-xs)">
+    <footer class="page center faint text-xs">
       Team Roll · Roll 点结果实时同步 · <a href="/sitemap.xml">站点地图</a> · <a href="/robots.txt">robots</a>
     </footer>
     <Toasts/>`,

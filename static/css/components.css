@@ -7,9 +7,11 @@
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border);
   display: flex;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
   inset-block-start: 0;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) calc(var(--gutter) + var(--safe-r)) calc(var(--space-3))
+    calc(var(--gutter) + var(--safe-l));
   position: sticky;
   z-index: var(--z-header);
 }
@@ -20,37 +22,57 @@
   display: flex;
   font-weight: 700;
   gap: var(--space-2);
+  margin-inline-end: auto;
   text-decoration: none;
 }
 
 .appbar__brand svg {
   color: var(--brand);
+  flex: none;
 }
 
 .appbar__nav {
   align-items: center;
   display: flex;
+  flex: 0 1 auto;
   flex-wrap: wrap;
   gap: var(--space-1);
+  min-width: 0;
 }
 
 .appbar__user {
   align-items: center;
   display: flex;
+  flex: 0 0 auto;
   gap: var(--space-2);
+  min-width: 0;
 }
 
-.link-btn {
-  background: none;
-  border: 0;
+.appbar__name {
   color: var(--text-muted);
-  cursor: pointer;
-  font: inherit;
-  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.link-btn:hover {
-  color: var(--text);
+/* 手机宽度只留必需操作：昵称让位、字标收掉、间距收紧，整条栏压成一行，
+   省下来的竖向空间比一个用户名和一行字标值钱。 */
+@media (max-width: 48rem) {
+  .appbar {
+    gap: var(--space-2) var(--space-3);
+  }
+
+  /* 小屏的胶囊再收一圈内边距，360 这一档也能守住单行。 */
+  .appbar .btn--sm {
+    padding-inline: var(--space-2);
+  }
+
+  .appbar__brand span,
+  .appbar__name {
+    display: none;
+  }
 }
 
 /* --- surfaces --- */
@@ -60,7 +82,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: var(--space-4);
+  padding: clamp(var(--space-4), 0.8rem + 1vw, var(--space-6));
 }
 
 .card--pad-none {
@@ -71,21 +93,31 @@
   align-items: center;
   border-bottom: 1px solid var(--border);
   display: flex;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) clamp(var(--space-3), 0.6rem + 1vw, var(--space-5));
+}
+
+.card__head h2,
+.card__head h3,
+.card > h2 {
+  font-size: var(--text-lg);
+  margin: 0;
 }
 
 .card__body {
-  padding: var(--space-4);
+  padding: clamp(var(--space-3), 0.8rem + 1vw, var(--space-5));
 }
 
 .card__foot {
   border-top: 1px solid var(--border);
   display: flex;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
   justify-content: flex-end;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) clamp(var(--space-3), 0.6rem + 1vw, var(--space-5))
+    calc(var(--space-3) + var(--safe-b));
 }
 
 .panel-title {
@@ -114,15 +146,29 @@
   font-weight: 600;
   gap: var(--space-2);
   justify-content: center;
-  min-height: 2.1rem;
+  min-height: 2.25rem;
   padding: var(--space-2) var(--space-4);
   text-decoration: none;
+  touch-action: manipulation;
   transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
     transform var(--dur-fast) var(--ease);
 }
 
-.btn:hover:not(:disabled) {
-  background: var(--bg-hover);
+/* 触屏没有真正的悬停， hover 样式只在能悬停的设备上生效，否则点完会留着高亮。 */
+@media (hover: hover) {
+  .btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+
+  .btn--primary:hover:not(:disabled) {
+    background: var(--brand-hover);
+    border-color: var(--brand-hover);
+  }
+
+  .btn--ghost:hover:not(:disabled) {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
 }
 
 .btn:active:not(:disabled) {
@@ -140,11 +186,6 @@
   color: var(--brand-contrast);
 }
 
-.btn--primary:hover:not(:disabled) {
-  background: var(--brand-hover);
-  border-color: var(--brand-hover);
-}
-
 .btn--danger {
   background: var(--danger-soft);
   border-color: var(--danger);
@@ -157,14 +198,9 @@
   color: var(--text-muted);
 }
 
-.btn--ghost:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--text);
-}
-
 .btn--sm {
   font-size: var(--text-xs);
-  min-height: 1.75rem;
+  min-height: 2rem;
   padding: var(--space-1) var(--space-2);
 }
 
@@ -176,6 +212,34 @@
 
 .btn-block {
   width: 100%;
+}
+
+/* 手指操作的设备：所有按钮抬到可点面积，表格里的小按钮也一样。 */
+@media (pointer: coarse) {
+  .btn {
+    min-height: var(--touch);
+    padding-inline: var(--space-4);
+  }
+
+  .btn--sm {
+    min-height: 2.5rem;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .btn--roll {
+    min-height: 3.25rem;
+  }
+
+  .tab {
+    min-height: var(--touch);
+  }
+}
+
+/* 手机上主操作铺满一行，不用瞄准。 */
+@media (max-width: 30rem) {
+  .card__foot > .btn {
+    flex: 1 1 8rem;
+  }
 }
 
 /* --- forms --- */
@@ -199,8 +263,23 @@
   border-radius: var(--radius);
   color: var(--text);
   font: inherit;
+  min-height: 2.25rem;
   padding: var(--space-2) var(--space-3);
   width: 100%;
+}
+
+/* 低于 16px 的输入框在 iOS 上聚焦会自动放大整页，触屏设备上统一抬到 16px。 */
+@media (pointer: coarse) {
+  .input,
+  .select,
+  .textarea {
+    font-size: 1rem;
+    min-height: var(--touch);
+  }
+
+  .textarea {
+    min-height: 6.5rem;
+  }
 }
 
 .input:focus,
@@ -233,7 +312,7 @@
 .form-grid {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
 }
 
 .checkbox {
@@ -244,8 +323,8 @@
 
 .checkbox input {
   accent-color: var(--brand);
-  height: 1.05rem;
-  width: 1.05rem;
+  height: 1.25rem;
+  width: 1.25rem;
 }
 
 .filters {
@@ -256,14 +335,56 @@
 }
 
 .filters .field {
-  min-width: 9rem;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.filters .field--wide {
+  flex-basis: 16rem;
+}
+
+/* 搜索框跟着行宽伸缩，窄屏上不会把整条工具栏顶出去。 */
+.field--search {
+  flex: 1 1 12rem;
+  max-width: 16rem;
+  min-width: 0;
+}
+
+/* 手机上搜索框吃满剩余宽度，右边和标签页对齐，不再缩成一小块。 */
+@media (max-width: 48rem) {
+  .field--search {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+}
+
+/* 窄屏下筛选区一行一个条件，按钮跟着铺满。
+   纵向排列时 flex-basis 管的是高度，得换回 auto，否则 12rem 会变成每行的高度。 */
+@media (max-width: 48rem) {
+  .filters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filters .field,
+  .filters .field--wide {
+    flex: 1 1 auto;
+  }
+
+  .filters > .btn {
+    width: 100%;
+  }
 }
 
 /* --- tables --- */
 
 .table-wrap {
+  container-type: inline-size;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   border-radius: var(--radius-lg);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .table {
@@ -306,11 +427,145 @@
   text-align: right;
 }
 
+/* 一个格子里放两行（主值 + 附属说明），窄屏卡片档继续竖排。 */
+.table .multi {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.cell-sub {
+  color: var(--text-faint);
+  font-size: var(--text-2xs);
+}
+
+/* 浏览器标识可能很长，宽表里限住宽度再用省略号，鼠标悬停看全文。 */
+.cell-sub--wide {
+  max-width: 22rem;
+}
+
+/* 活动名这类可点开的长文本，在格子里限住宽度再省略，窄屏靠卡片档展开。 */
+.cell-link {
+  display: block;
+  max-width: 12rem;
+}
+
 .table__actions {
   display: flex;
   gap: var(--space-1);
   justify-content: flex-end;
   white-space: nowrap;
+}
+
+/* 表格三档自适应：宽屏整表，平板收掉次要列，手机一行一张卡片。
+   卡片档靠单元格上的 data-label 出字段名，一列信息都不丢。 */
+@media (max-width: 62rem) {
+  .is-secondary {
+    display: none;
+  }
+}
+
+@media (max-width: 48rem) {
+  .table-wrap {
+    container-type: normal;
+    overflow: visible;
+  }
+
+  .table thead {
+    display: none;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+  }
+
+  .table tr {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .table tbody tr:hover {
+    background: inherit;
+  }
+
+  .table td {
+    align-items: baseline;
+    border: 0;
+    display: flex;
+    font-family: inherit;
+    gap: var(--space-3);
+    justify-content: space-between;
+    padding: var(--space-1) 0;
+    text-align: right;
+  }
+
+  /* 卡片档一行就是整条记录，平板上收掉的次要列在这儿全部还回来。 */
+  .table td.is-secondary {
+    display: flex;
+  }
+
+  /* UUID、IP、UA 这种长串没有天然断点，会把整张卡片顶出屏幕；
+     断词加上 min-width 归零，让值自己在列里换行。 */
+  .table td,
+  .table td > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .table td.nowrap {
+    white-space: normal;
+  }
+
+  .table .cell-link {
+    display: inline;
+    max-width: none;
+  }
+
+  .table td::before {
+    color: var(--text-muted);
+    content: attr(data-label);
+    flex: none;
+    font-size: var(--text-xs);
+    font-weight: 650;
+    text-align: left;
+  }
+
+  /* 没有 data-label 的格子是操作列，字段名就不必出现了。 */
+  .table td:not([data-label])::before {
+    content: none;
+  }
+
+  .table td:not([data-label]) {
+    justify-content: stretch;
+    padding-top: var(--space-2);
+  }
+
+  .table__actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .table__actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .table .multi {
+    align-items: flex-end;
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+  }
+
+  .table .cell-sub,
+  .table .cell-sub--wide {
+    max-width: 100%;
+  }
 }
 
 /* --- pills & badges --- */
@@ -458,14 +713,30 @@
   flex: none;
 }
 
+/* 手机上对话框贴着屏幕底边当抽屉用，圆角只留上方，手指够得着按钮。 */
+@media (max-width: 48rem) {
+  .modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal__panel {
+    border-bottom: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 88dvh;
+    max-width: none;
+  }
+}
+
 .toasts {
-  bottom: var(--space-4);
+  bottom: calc(var(--space-4) + var(--safe-b));
   display: grid;
   gap: var(--space-2);
   left: 50%;
+  max-width: calc(100vw - 2 * (var(--gutter) + var(--safe-l)));
   position: fixed;
   transform: translateX(-50%);
-  width: min(26rem, calc(100vw - var(--space-4)));
+  width: 26rem;
   z-index: var(--z-toast);
 }
 
@@ -532,8 +803,25 @@
 .pager {
   align-items: center;
   display: flex;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
   justify-content: space-between;
+}
+
+/* 手机上分页统计单独一行，两个按钮各占一半。 */
+@media (max-width: 30rem) {
+  .pager {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pager > .row {
+    justify-content: space-between;
+  }
+
+  .pager .btn {
+    flex: 1 1 0;
+  }
 }
 
 /* --- states --- */

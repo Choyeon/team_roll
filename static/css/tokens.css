@@ -1,21 +1,29 @@
 /* Design tokens — the only place raw color values are allowed.
    Light/dark pairs are resolved by `light-dark()` from the used `color-scheme`,
    so the OS preference wins by default and the theme toggle only rewrites
-   `color-scheme` (no inline script needed, CSP stays 'self'-only). */
+   `color-scheme` (no inline script needed, CSP stays 'self'-only).
+
+   断点统一用 rem，只有这几档，别的不加：
+     30rem  手机横屏 / 小屏
+     48rem  平板竖屏（表格改卡片、弹窗改底部抽屉）
+     62rem  平板横屏（两栏改一栏、后台导航改顶部条）
+     78rem  页面最大宽度
+*/
 
 :root {
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans SC", "PingFang SC",
     "Microsoft YaHei", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
 
-  --text-2xs: 0.7rem;
-  --text-xs: 0.78rem;
-  --text-sm: 0.86rem;
-  --text-base: 0.95rem;
-  --text-lg: 1.1rem;
-  --text-xl: 1.35rem;
-  --text-2xl: 1.7rem;
-  --text-3xl: 2.2rem;
+  /* 流式字阶：小屏不至于太小，大屏不至于虚张。 */
+  --text-2xs: clamp(0.72rem, 0.68rem + 0.16vw, 0.78rem);
+  --text-xs: clamp(0.76rem, 0.72rem + 0.2vw, 0.82rem);
+  --text-sm: clamp(0.84rem, 0.8rem + 0.2vw, 0.9rem);
+  --text-base: clamp(0.95rem, 0.92rem + 0.14vw, 1rem);
+  --text-lg: clamp(1.05rem, 1rem + 0.3vw, 1.2rem);
+  --text-xl: clamp(1.25rem, 1.1rem + 0.7vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 1.25rem + 1.2vw, 2rem);
+  --text-3xl: clamp(1.8rem, 1.3rem + 2.2vw, 2.8rem);
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -24,6 +32,14 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
   --space-7: 3rem;
+
+  /* 页面左右留白跟着视口走，刘海屏再把安全区加回来。 */
+  --gutter: clamp(0.875rem, 0.4rem + 1.8vw, 2rem);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  /* 手指操作时的最小可点高度。 */
+  --touch: 2.75rem;
 
   --radius-sm: 6px;
   --radius: 10px;

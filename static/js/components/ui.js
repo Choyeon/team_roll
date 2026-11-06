@@ -79,7 +79,7 @@ export const AppModal = defineComponent({
     <dialog class="modal" ref="dialog" :aria-label="title || '对话框'" @close="close" @click.self="close">
       <div class="modal__panel" :style="width ? { maxWidth: width } : null">
         <div class="card__head">
-          <h2 style="margin:0;font-size:var(--text-lg)">{{ title }}</h2>
+          <h2>{{ title }}</h2>
           <button class="btn btn--ghost btn--sm" type="button" aria-label="关闭" @click="close">×</button>
         </div>
         <div class="card__body"><slot></slot></div>
@@ -103,7 +103,7 @@ export const ConfirmDialog = defineComponent({
     <AppModal :title="title" @close="$emit('result', false)">
       <div class="stack">
         <slot>
-          <p class="muted" style="margin:0">{{ message }}</p>
+          <p class="muted">{{ message }}</p>
         </slot>
       </div>
       <template #footer>

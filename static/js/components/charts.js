@@ -62,9 +62,9 @@ export const BarChart = defineComponent({
     return { max, pct: (item) => `${((Number(item.value) || 0) / max.value) * 100}%` };
   },
   template: `
-    <ul class="stack-tight" style="list-style:none;margin:0;padding:0">
+    <ul class="stack-tight list-reset">
       <li v-for="item in data" :key="item.label" class="stack-tight">
-        <div class="row row--between" style="font-size:var(--text-xs)">
+        <div class="row row--between text-xs">
           <span class="muted">{{ item.label }}</span>
           <span class="mono">{{ item.display ?? item.value }}</span>
         </div>
@@ -104,17 +104,17 @@ export const DonutChart = defineComponent({
     return { radius, circumference, arcs, total, palette: PALETTE };
   },
   template: `
-    <div class="row" style="gap:var(--space-4)">
-      <svg class="chart" viewBox="0 0 120 120" style="max-width:9rem" role="img" aria-label="状态分布">
+    <div class="donut">
+      <svg class="chart" viewBox="0 0 120 120" role="img" aria-label="状态分布">
         <circle :cx="60" :cy="60" :r="radius" fill="none" class="chart__grid" stroke-width="14"/>
         <circle v-for="arc in arcs" :key="arc.label" class="donut__segment" :cx="60" :cy="60" :r="radius"
                 :stroke="arc.color" :stroke-dasharray="arc.dash" :stroke-dashoffset="arc.offset"
                 transform="rotate(-90 60 60)">
           <title>{{ arc.label }}：{{ arc.value }}</title>
         </circle>
-        <text class="chart__value" x="60" y="64" text-anchor="middle" style="font-size:16px">{{ total }}</text>
+        <text class="chart__center" x="60" y="64" text-anchor="middle">{{ total }}</text>
       </svg>
-      <ul class="legend" style="flex-direction:column;align-items:flex-start">
+      <ul class="legend legend--start">
         <li v-for="arc in arcs" :key="arc.label">
           <span class="legend__swatch" :style="{ background: arc.color }"></span>{{ arc.label }} · {{ arc.value }}
         </li>

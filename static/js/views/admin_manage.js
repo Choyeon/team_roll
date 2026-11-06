@@ -111,8 +111,8 @@ export const AdminsView = defineComponent({
     <section class="admin__section stack">
       <div class="page-head">
         <div>
-          <h1 style="margin:0">管理员账号</h1>
-          <p class="muted" style="margin:0">仅超级管理员可见；停用账号会立即下线其全部会话。</p>
+          <h1>管理员账号</h1>
+          <p class="muted">仅超级管理员可见；停用账号会立即下线其全部会话。</p>
         </div>
         <button v-if="can('manage_admins')" class="btn btn--primary" type="button" @click="openCreate">新建账号</button>
       </div>
@@ -125,20 +125,18 @@ export const AdminsView = defineComponent({
           <table class="table">
             <caption class="sr-only">管理员列表</caption>
             <thead>
-              <tr><th>用户名</th><th>昵称</th><th>角色</th><th>状态</th><th>最近登录</th><th>失败次数</th><th></th></tr>
+              <tr><th>用户名</th><th class="is-secondary">昵称</th><th>角色</th><th>状态</th><th>最近登录</th><th class="is-secondary">失败次数</th><th></th></tr>
             </thead>
             <tbody>
               <tr v-for="admin in items" :key="admin.id">
-                <td class="strong">{{ admin.username }}</td>
-                <td>{{ admin.display_name || '—' }}</td>
-                <td><StatusPill :value="admin.role === 'super' ? 'active' : 'neutral'" :label="ROLE_LABEL[admin.role]"/></td>
-                <td><StatusPill :value="admin.is_active ? 'valid' : 'void'" :label="admin.is_active ? '启用' : '停用'"/></td>
-                <td class="nowrap">{{ admin.last_login_at ? dateTime(admin.last_login_at) : '从未' }}
-                  <div class="faint mono" style="font-size:var(--text-2xs)">{{ admin.last_login_ip || '' }}</div>
-                </td>
-                <td class="num">
+                <td data-label="用户名" class="strong">{{ admin.username }}</td>
+                <td data-label="昵称" class="is-secondary">{{ admin.display_name || '—' }}</td>
+                <td data-label="角色"><StatusPill :value="admin.role === 'super' ? 'active' : 'neutral'" :label="ROLE_LABEL[admin.role]"/></td>
+                <td data-label="状态"><StatusPill :value="admin.is_active ? 'valid' : 'void'" :label="admin.is_active ? '启用' : '停用'"/></td>
+                <td data-label="最近登录" class="multi nowrap">{{ admin.last_login_at ? dateTime(admin.last_login_at) : '从未' }}<span class="cell-sub mono">{{ admin.last_login_ip || '' }}</span></td>
+                <td data-label="失败次数" class="num is-secondary">
                   {{ admin.failed_login_count }}
-                  <div v-if="admin.locked_until" class="faint" style="font-size:var(--text-2xs)">锁定至 {{ dateTime(admin.locked_until) }}</div>
+                  <span v-if="admin.locked_until" class="cell-sub">锁定至 {{ dateTime(admin.locked_until) }}</span>
                 </td>
                 <td>
                   <div class="table__actions">
@@ -179,7 +177,7 @@ export const AdminsView = defineComponent({
             <input id="ad-active" type="checkbox" v-model="form.is_active">
             <span>账号启用（停用会立即下线其会话）</span>
           </label>
-          <p class="faint" style="font-size:var(--text-xs);margin:0">密码使用 pbkdf2_sha256 加盐存储；连续登录失败会临时锁定账号。</p>
+          <p class="faint text-xs">密码使用 pbkdf2_sha256 加盐存储；连续登录失败会临时锁定账号。</p>
           <p v-if="formError" class="field__error" role="alert">{{ formError }}</p>
         </div>
         <template #footer>
@@ -223,8 +221,8 @@ export const SessionsView = defineComponent({
     <section class="admin__section stack">
       <div class="page-head">
         <div>
-          <h1 style="margin:0">在线会话</h1>
-          <p class="muted" style="margin:0">同一账号只保留最新会话。这里可以强制下线其他设备。</p>
+          <h1>在线会话</h1>
+          <p class="muted">同一账号只保留最新会话。这里可以强制下线其他设备。</p>
         </div>
         <div class="row">
           <button class="btn" type="button" @click="load">刷新</button>
@@ -237,15 +235,15 @@ export const SessionsView = defineComponent({
         <div class="table-wrap">
           <table class="table">
             <caption class="sr-only">会话列表</caption>
-            <thead><tr><th>账号</th><th>IP</th><th>登录时间</th><th>最近活动</th><th>过期</th><th>设备</th><th></th></tr></thead>
+            <thead><tr><th>账号</th><th>IP</th><th class="is-secondary">登录时间</th><th>最近活动</th><th class="is-secondary">过期</th><th>设备</th><th></th></tr></thead>
             <tbody>
               <tr v-for="session in items" :key="session.id">
-                <td>{{ session.username }}<StatusPill v-if="session.current" value="brand" label="当前"/></td>
-                <td class="mono faint">{{ session.ip || '—' }}</td>
-                <td class="nowrap">{{ dateTime(session.created_at) }}</td>
-                <td class="nowrap">{{ dateTime(session.last_seen_at) }}</td>
-                <td class="nowrap">{{ dateTime(session.expires_at) }}</td>
-                <td class="truncate" style="max-width:16rem">{{ session.user_agent || '—' }}</td>
+                <td data-label="账号">{{ session.username }}<StatusPill v-if="session.current" value="brand" label="当前"/></td>
+                <td data-label="IP" class="mono faint">{{ session.ip || '—' }}</td>
+                <td data-label="登录时间" class="nowrap is-secondary">{{ dateTime(session.created_at) }}</td>
+                <td data-label="最近活动" class="nowrap">{{ dateTime(session.last_seen_at) }}</td>
+                <td data-label="过期" class="nowrap is-secondary">{{ dateTime(session.expires_at) }}</td>
+                <td data-label="设备" class="cell-sub--wide truncate" :title="session.user_agent">{{ session.user_agent || '—' }}</td>
                 <td>
                   <div class="table__actions">
                     <button v-if="!session.current && can('manage')" class="btn btn--sm btn--danger" type="button" @click="revoke(session)">强制下线</button>
@@ -303,8 +301,8 @@ export const AuditView = defineComponent({
     <section class="admin__section stack">
       <div class="page-head">
         <div>
-          <h1 style="margin:0">审计日志</h1>
-          <p class="muted" style="margin:0">记录建活动、改规则、作废记录、账号变更等管理动作。</p>
+          <h1>审计日志</h1>
+          <p class="muted">记录建活动、改规则、作废记录、账号变更等管理动作。</p>
         </div>
         <div class="row">
           <a class="btn" href="/api/v1/admin/export/audit.csv">导出 CSV</a>
@@ -313,7 +311,7 @@ export const AuditView = defineComponent({
       </div>
 
       <div class="filters card">
-        <label class="field" style="flex:1 1 12rem">
+        <label class="field">
           <span class="field__label">关键词</span>
           <input id="au-q" class="input" v-model="filters.q" type="search" placeholder="对象 ID / 详情" @keyup.enter="load(1)">
         </label>
@@ -344,15 +342,15 @@ export const AuditView = defineComponent({
         <div class="table-wrap">
           <table class="table">
             <caption class="sr-only">审计日志</caption>
-            <thead><tr><th>时间</th><th>操作</th><th>管理员</th><th>对象</th><th>IP</th><th>详情</th></tr></thead>
+            <thead><tr><th>时间</th><th>操作</th><th>管理员</th><th class="is-secondary">对象</th><th class="is-secondary">IP</th><th>详情</th></tr></thead>
             <tbody>
               <tr v-for="row in items" :key="row.id">
-                <td class="nowrap">{{ dateTime(row.created_at) }}</td>
-                <td class="mono">{{ row.action }}</td>
-                <td>{{ row.actor_label }}</td>
-                <td class="mono faint">{{ row.target_type }}<template v-if="row.target_id"> · {{ row.target_id }}</template></td>
-                <td class="mono faint">{{ row.ip || '—' }}</td>
-                <td><details v-if="row.detail"><summary class="faint" style="cursor:pointer">查看</summary>
+                <td data-label="时间" class="nowrap">{{ dateTime(row.created_at) }}</td>
+                <td data-label="操作" class="mono">{{ row.action }}</td>
+                <td data-label="管理员">{{ row.actor_label }}</td>
+                <td data-label="对象" class="mono faint is-secondary">{{ row.target_type }}<template v-if="row.target_id"> · {{ row.target_id }}</template></td>
+                <td data-label="IP" class="mono faint is-secondary">{{ row.ip || '—' }}</td>
+                <td data-label="详情"><details v-if="row.detail"><summary class="faint">查看</summary>
                   <pre class="audit-detail">{{ jsonDetail(row.detail) }}</pre></details><span v-else>—</span></td>
               </tr>
             </tbody>
@@ -401,19 +399,19 @@ export const ExportView = defineComponent({
     <section class="admin__section stack">
       <div class="page-head">
         <div>
-          <h1 style="margin:0">数据导出</h1>
-          <p class="muted" style="margin:0">CSV 带 UTF-8 BOM，Excel 直接打开不乱码；快照 JSON 适合做迁移备份。</p>
+          <h1>数据导出</h1>
+          <p class="muted">CSV 带 UTF-8 BOM，Excel 直接打开不乱码；快照 JSON 适合做迁移备份。</p>
         </div>
       </div>
 
       <div class="export-grid">
         <div class="card stack-tight">
-          <h2 style="margin:0;font-size:var(--text-lg)">活动清单</h2>
-          <p class="muted" style="margin:0">全部活动及统计字段。</p>
+          <h2>活动清单</h2>
+          <p class="muted">全部活动及统计字段。</p>
           <a class="btn btn--primary" href="/api/v1/admin/export/activities.csv">下载 activities.csv</a>
         </div>
         <div class="card stack-tight">
-          <h2 style="margin:0;font-size:var(--text-lg)">Roll 记录</h2>
+          <h2>Roll 记录</h2>
           <label class="field">
             <span class="field__label">活动</span>
             <select id="ex-activity" class="select" v-model="activityId">
@@ -432,13 +430,13 @@ export const ExportView = defineComponent({
           <a class="btn btn--primary" :href="rollsUrl()">下载 rolls.csv</a>
         </div>
         <div class="card stack-tight">
-          <h2 style="margin:0;font-size:var(--text-lg)">审计日志</h2>
-          <p class="muted" style="margin:0">全部管理操作流水。</p>
+          <h2>审计日志</h2>
+          <p class="muted">全部管理操作流水。</p>
           <a class="btn btn--primary" href="/api/v1/admin/export/audit.csv">下载 audit-log.csv</a>
         </div>
         <div class="card stack-tight">
-          <h2 style="margin:0;font-size:var(--text-lg)">完整快照</h2>
-          <p class="muted" style="margin:0">活动 + Roll 历史的 JSON，可跨环境恢复。</p>
+          <h2>完整快照</h2>
+          <p class="muted">活动 + Roll 历史的 JSON，可跨环境恢复。</p>
           <a class="btn btn--primary" href="/api/v1/admin/export/snapshot.json">下载 snapshot.json</a>
         </div>
       </div>
@@ -504,8 +502,8 @@ export const SystemView = defineComponent({
     <section class="admin__section stack">
       <div class="page-head">
         <div>
-          <h1 style="margin:0">系统状态</h1>
-          <p class="muted" style="margin:0">运行参数、数据库体量与安全策略。</p>
+          <h1>系统状态</h1>
+          <p class="muted">运行参数、数据库体量与安全策略。</p>
         </div>
         <div class="row">
           <a class="btn" href="/healthz" target="_blank" rel="noopener">健康检查</a>
@@ -518,18 +516,18 @@ export const SystemView = defineComponent({
       <div v-else-if="info" class="grid-2">
         <div class="card stack-tight">
           <p class="panel-title">运行环境</p>
-          <dl class="row" style="gap:var(--space-5)">
-            <div><dt class="muted">应用</dt><dd class="strong" style="margin:0">{{ info.app_name }} {{ info.version }}</dd></div>
-            <div><dt class="muted">环境</dt><dd style="margin:0">{{ info.environment }}{{ info.debug ? '（调试模式）' : '' }}</dd></div>
-            <div><dt class="muted">Python</dt><dd style="margin:0" class="mono">{{ info.python_version }}</dd></div>
-            <div><dt class="muted">已运行</dt><dd style="margin:0">{{ duration(info.uptime_seconds) }}</dd></div>
-            <div><dt class="muted">服务器时间</dt><dd style="margin:0">{{ dateTime(info.server_time) }}</dd></div>
-            <div><dt class="muted">实时连接</dt><dd style="margin:0">{{ number(info.websocket_connections) }}</dd></div>
+          <dl class="defs">
+            <div><dt>应用</dt><dd class="strong">{{ info.app_name }} {{ info.version }}</dd></div>
+            <div><dt>环境</dt><dd>{{ info.environment }}{{ info.debug ? '（调试模式）' : '' }}</dd></div>
+            <div><dt>Python</dt><dd class="mono">{{ info.python_version }}</dd></div>
+            <div><dt>已运行</dt><dd>{{ duration(info.uptime_seconds) }}</dd></div>
+            <div><dt>服务器时间</dt><dd>{{ dateTime(info.server_time) }}</dd></div>
+            <div><dt>实时连接</dt><dd>{{ number(info.websocket_connections) }}</dd></div>
           </dl>
         </div>
         <div class="card stack-tight">
           <p class="panel-title">安全策略</p>
-          <ul class="muted" style="margin:0;padding-left:var(--space-4)">
+          <ul class="muted">
             <li>会话有效期 {{ info.session_ttl_minutes }} 分钟，密码 pbkdf2_sha256 加盐存储</li>
             <li>登录限流：{{ info.rate_limits.login_per_window }} 次 / {{ info.rate_limits.login_window_seconds }} 秒</li>
             <li>Roll 限流：{{ info.rate_limits.roll_per_window }} 次 / {{ info.rate_limits.roll_window_seconds }} 秒</li>
@@ -538,7 +536,7 @@ export const SystemView = defineComponent({
         </div>
         <div class="card stack-tight">
           <p class="panel-title">数据库（{{ info.database.url_scheme }} · {{ bytes(info.database.file_size_bytes) }}）</p>
-          <ul class="legend" style="flex-direction:column;align-items:stretch">
+          <ul class="legend legend--stack">
             <li v-for="(count, table) in info.database.tables" :key="table" class="row row--between">
               <span class="mono">{{ table }}</span><span class="mono strong">{{ number(count) }}</span>
             </li>
@@ -560,7 +558,7 @@ export const SystemView = defineComponent({
           </label>
           <p v-if="passwordError" class="field__error" role="alert">{{ passwordError }}</p>
           <button class="btn btn--primary" type="button" :disabled="busy" @click="changePassword">更新密码</button>
-          <p class="faint" style="font-size:var(--text-xs);margin:0">修改成功后其他设备的会话会被撤销。</p>
+          <p class="faint text-xs">修改成功后其他设备的会话会被撤销。</p>
         </div>
       </div>
     </section>`,
