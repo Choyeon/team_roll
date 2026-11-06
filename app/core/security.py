@@ -89,6 +89,13 @@ def client_ip(request: Request | None, *, trust_proxy_headers: bool = False) -> 
     return direct or "unknown"
 
 
+def client_user_agent(request: Request | None) -> str:
+    """Collapsible whitespace, cut to the storage width — it is display data, not a key."""
+    if request is None:
+        return ""
+    return " ".join((request.headers.get("user-agent") or "").split())[:200]
+
+
 def client_ip_from_headers(headers: Iterable[tuple[bytes, bytes]], *, trust_proxy_headers: bool, fallback: str) -> str:
     """WebSocket variant: ASGI headers are byte pairs and ``client`` may be the proxy."""
     if not trust_proxy_headers:

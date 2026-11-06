@@ -132,6 +132,7 @@ class RollResult(Base):
         _enum(RollStatus), default=RollStatus.VALID, nullable=False, index=True
     )
     ip: Mapped[str] = mapped_column(String(64), default="")
+    user_agent: Mapped[str] = mapped_column(String(200), default="")
     timestamp: Mapped[datetime] = mapped_column(UTCDateTime, default=utc_now, nullable=False, index=True)
 
     void_reason: Mapped[str] = mapped_column(String(200), default="")

@@ -59,7 +59,7 @@ def _valid_ranks(db: Session, activity_ids: set[str]) -> dict[str, int]:
 
 def rolls_csv(db: Session, *, activity_id: str | None = None, status: str = "all") -> Iterator[str]:
     buffer, writer, prefix = _start_row_stream(
-        ["result_id", "activity_id", "activity_name", "name", "number", "status", "rank", "ip", "rolled_at_utc"]
+        ["result_id", "activity_id", "activity_name", "name", "number", "status", "rank", "ip", "user_agent", "rolled_at_utc"]
     )
     yield prefix
 
@@ -86,6 +86,7 @@ def rolls_csv(db: Session, *, activity_id: str | None = None, status: str = "all
                 roll.status.value,
                 ranks.get(roll.id, "") if roll.status is RollStatus.VALID else "",
                 roll.ip or "",
+                roll.user_agent or "",
                 roll.timestamp.isoformat(),
             ]
         )

@@ -25,7 +25,7 @@ from app.api.v1 import (
 from app.core.config import Settings, get_settings
 from app.core.deps import DbSession
 from app.core.logging import RequestIdMiddleware, configure_logging
-from app.core.security import client_ip
+from app.core.security import client_ip, client_user_agent
 from app.core.ws import ConnectionManager
 from app.db import migrate
 from app.db.session import get_engine, get_sessionmaker
@@ -75,6 +75,7 @@ def _build_middleware(app: FastAPI, settings: Settings) -> None:
     @app.middleware("http")
     async def resolve_client_ip(request: Request, call_next):
         request.state.client_ip = client_ip(request, trust_proxy_headers=settings.trust_proxy_headers)
+        request.state.user_agent = client_user_agent(request)
         return await call_next(request)
 
     @app.middleware("http")

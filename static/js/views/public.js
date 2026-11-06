@@ -8,7 +8,7 @@ import { openActivitySocket } from "../lib/ws.js";
 import { computed, defineComponent, onBeforeUnmount, onMounted, ref, watch } from "../lib/vue.js";
 import { NumberReel } from "../components/reel.js";
 import { RibbonBurst } from "../components/burst.js";
-import { BANDS, tierOf } from "../lib/tier.js";
+import { tierOf } from "../lib/tier.js";
 import { Busy, EmptyState, Pager, StatusPill } from "../components/ui.js";
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -103,8 +103,8 @@ export const HomeView = defineComponent({
     <div class="page stack">
       <section class="hero stack-tight">
         <h1 class="hero__title">团队 Roll 点</h1>
-        <p class="hero__lead">管理员创建活动并设定数值区间，队友在同一个页面 Roll 点，结果按数值从高到低实时排行。
-          每人可参与次数、区间上限都由活动规则决定，作废的数值会自动释放。</p>
+        <p class="hero__lead">管理员建一个数值区间，队友在同一个页面各领一个不重复的随机数，结果按数值从高到低实时排行。
+          每人能 Roll 几次、能进多少人，都在活动规则里设；作废的数值会重新开放。</p>
         <div class="row" v-if="activeTotal">
           <button class="btn btn--primary" type="button" @click="showActive">
             参与进行中的活动 · {{ number(activeTotal) }}
@@ -342,10 +342,10 @@ export const ActivityView = defineComponent({
       if (reducedMotion) return;
       burst.value += 1;
       const seq = burst.value;
-      // 粒子动画自带 forwards，收尾只是把这几十个小元素从 DOM 里撤掉。
+      // 粒子动画自带 forwards，收尾只是把这上百个小元素从 DOM 里撤掉。
       setTimeout(() => {
         if (burst.value === seq) burst.value = 0;
-      }, 2200);
+      }, 3200);
     }
 
     function onLanded() {
@@ -390,7 +390,7 @@ export const ActivityView = defineComponent({
       activity, rolls, loading, missing, name, busy, rolling, reeling, rollSeq, reelTarget, burst,
       display, mine, fresh, socketStatus, connections, range, reelDigits, displayState, revealTier,
       rollTier, canRoll, blockReason, load, rollTheDice, onLanded,
-      BANDS, STATUS_LABEL, dateTime, number, percent,
+      STATUS_LABEL, dateTime, number,
     };
   },
   template: `
@@ -403,6 +403,8 @@ export const ActivityView = defineComponent({
       </section>
 
       <div v-else-if="activity" class="stack">
+        <RibbonBurst v-if="burst && revealTier" :key="burst" :tier="revealTier.key"/>
+
         <header class="row row--between">
           <div class="stack-tight">
             <div class="row">
@@ -423,25 +425,16 @@ export const ActivityView = defineComponent({
         <div v-if="blockReason" class="pill pill--paused" role="status">{{ blockReason }}</div>
 
         <div class="roll-hero">
-          <section class="card rollbox" aria-label="Roll 点">
+          <section class="card rollbox" :data-quake="burst ? 'true' : null" aria-label="Roll 点">
             <div class="rollbox__display" :data-state="displayState"
                  :data-tier="revealTier ? revealTier.key : null" aria-live="polite" aria-atomic="true">
               <NumberReel v-if="reeling" :key="rollSeq" :digits="reelDigits" :target="reelTarget"
                           :label="display" @landed="onLanded"/>
-              <span v-else class="reveal">{{ display || (activity.roll_min + '-' + activity.roll_max) }}</span>
-              <RibbonBurst v-if="burst && revealTier" :key="burst" :tier="revealTier.key"/>
+              <span v-else class="reveal">{{ display || '等待 Roll 点' }}</span>
             </div>
             <p class="rollbox__range" v-if="mine && !rolling">
-              {{ mine.name }} 的数值是 {{ number(mine.number) }}<template v-if="revealTier">，
-              {{ revealTier.label }}档（区间 {{ revealTier.pct }}% 位）</template>，当前排名第 {{ mine.rank }}
+              {{ mine.name }}：{{ number(mine.number) }}，当前第 {{ mine.rank }} 名
             </p>
-            <ul class="tier-legend" aria-label="档位配色说明">
-              <li v-for="band in BANDS" :key="band.key" :data-tier="band.key">
-                <span class="tier-legend__dot" aria-hidden="true"></span>
-                {{ band.label }}
-                <span class="faint">{{ band.from }}-{{ band.to }}%</span>
-              </li>
-            </ul>
             <label class="field" style="width:100%">
               <span class="field__label">你的名字</span>
               <input id="player-name" class="input" v-model="name" maxlength="32" autocomplete="nickname"
@@ -463,10 +456,10 @@ export const ActivityView = defineComponent({
             <div class="card__head">
               <h2 style="margin:0;font-size:var(--text-lg)">实时排行</h2>
               <span class="muted" style="font-size:var(--text-xs)">
-                已占用 {{ number(range.filled) }}/{{ number(range.size) }}（{{ percent(range.ratio) }}）
+                {{ number(range.filled) }}/{{ number(range.size) }} 个数值已 Roll · {{ number(activity.participants) }} 人
               </span>
             </div>
-            <div class="board card__body">
+            <div class="card__body">
               <ol class="board__list">
                 <li v-for="roll in rolls" :key="roll.id" class="board__row" :data-new="fresh === roll.id"
                     :data-tier="rollTier(roll.number)">
@@ -475,7 +468,7 @@ export const ActivityView = defineComponent({
                   <span class="board__number">{{ number(roll.number) }}</span>
                 </li>
               </ol>
-              <p v-if="!rolls.length" class="muted center" style="padding:var(--space-5)">还没有人 Roll 点，等你开第一枪。</p>
+              <p v-if="!rolls.length" class="muted center" style="padding:var(--space-5)">还没有人 Roll 点。</p>
             </div>
           </section>
         </div>
@@ -531,7 +524,7 @@ export const LoginView = defineComponent({
         <button class="btn btn--primary btn-block" type="submit" :disabled="busy">
           <span v-if="busy" class="spinner" aria-hidden="true"></span>{{ busy ? '登录中…' : '登录' }}
         </button>
-        <p class="faint" style="font-size:var(--text-xs);margin:0">多次密码错误会临时锁定账户，这是正常的防暴力破解策略。</p>
+        <p class="faint" style="font-size:var(--text-xs);margin:0">连续输错密码会临时锁定账号。</p>
       </form>
     </div>`,
 });

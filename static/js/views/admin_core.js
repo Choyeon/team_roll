@@ -596,7 +596,7 @@ export const RollsView = defineComponent({
       <div class="page-head">
         <div>
           <h1 style="margin:0">Roll 记录</h1>
-          <p class="muted" style="margin:0">按记录 ID 精确作废、恢复、改名、改数值或直接删除。</p>
+          <p class="muted" style="margin:0">这里可以作废、恢复、改名、改数值，或直接删除单条记录。</p>
         </div>
         <button v-if="can('manage') && activityId" class="btn btn--primary" type="button" @click="openAdd">补录记录</button>
       </div>
@@ -639,7 +639,7 @@ export const RollsView = defineComponent({
             <thead>
               <tr>
                 <th class="num">排名</th><th>玩家</th><th class="num">数值</th><th>状态</th>
-                <th>时间</th><th>IP</th><th>备注</th><th></th>
+                <th>时间</th><th>IP / 浏览器</th><th>备注</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -649,7 +649,10 @@ export const RollsView = defineComponent({
                 <td class="num strong">{{ number(roll.number) }}</td>
                 <td><StatusPill :value="roll.status" :label="ROLL_STATUS_LABEL[roll.status]"/></td>
                 <td class="nowrap">{{ dateTime(roll.timestamp) }}</td>
-                <td class="mono faint">{{ roll.ip || '—' }}</td>
+                <td class="mono faint">{{ roll.ip || '—' }}
+                  <div class="truncate" style="font-size:var(--text-2xs);max-width:22rem"
+                       :title="roll.user_agent">{{ roll.user_agent || '' }}</div>
+                </td>
                 <td class="faint">{{ roll.void_reason || (roll.created_by ? '由 ' + roll.created_by + ' 补录' : '') }}</td>
                 <td>
                   <div class="table__actions" v-if="can('manage')">

@@ -50,5 +50,6 @@ class RollPublic(BaseModel):
 
 class RollAdminOut(RollPublic):
     ip: str = ""
+    user_agent: str = ""
     void_reason: str = ""
     created_by: str = ""

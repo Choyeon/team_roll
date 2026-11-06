@@ -61,12 +61,44 @@
 
 .rollbox {
   align-items: center;
+  align-self: start;
   display: grid;
   gap: var(--space-4);
   justify-items: center;
   overflow: hidden;
-  position: relative;
+  position: sticky;
   text-align: center;
+  top: var(--space-5);
+}
+
+/* 榜单可能拉到很长，开奖框跟着页面滚到这儿就停住，数字一直在眼前。 */
+@media (max-width: 62rem) {
+  .rollbox {
+    position: static;
+  }
+}
+
+.rollbox[data-quake="true"] {
+  animation: quake 520ms var(--ease);
+}
+
+@keyframes quake {
+  0%,
+  100% {
+    transform: none;
+  }
+  14% {
+    transform: translate(-4px, 3px) rotate(-0.35deg);
+  }
+  32% {
+    transform: translate(5px, -3px) rotate(0.4deg);
+  }
+  52% {
+    transform: translate(-4px, 2px) rotate(-0.28deg);
+  }
+  72% {
+    transform: translate(3px, -1px) rotate(0.15deg);
+  }
 }
 
 .rollbox__display {
@@ -87,11 +119,47 @@
   width: 100%;
 }
 
-/* 转动途中只留一圈呼吸的微光，颜色要等数字停稳才揭晓。 */
+/* 转动途中只留一圈呼吸的微光加一道扫光，颜色要等数字停稳才揭晓。 */
 .rollbox__display[data-state="spinning"] {
   animation: suspense 900ms var(--ease) infinite;
   border-color: var(--border-strong);
   color: var(--text-muted);
+}
+
+.rollbox__display[data-state="spinning"]::before {
+  animation: sweep 1.15s linear infinite;
+  background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 0.5) 50%, transparent 62%);
+  background-size: 260% 100%;
+  border-radius: inherit;
+  content: "";
+  inset: 0;
+  opacity: 0.55;
+  pointer-events: none;
+  position: absolute;
+}
+
+@keyframes sweep {
+  from {
+    background-position: 190% 0;
+  }
+  to {
+    background-position: -90% 0;
+  }
+}
+
+/* 未开奖时空着，等参与者自己按按钮。 */
+.rollbox__display[data-state="idle"] .reveal {
+  color: var(--text-faint);
+  font-family: var(--font-sans);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.rollbox__display .reels,
+.rollbox__display .reveal {
+  position: relative;
+  z-index: 1;
 }
 
 .rollbox__display[data-state="revealed"] {
@@ -217,71 +285,111 @@
   }
 }
 
-/* --- 彩带粒子：挂载即撒一轮，动画自带 forwards 收尾 --- */
+/* --- 开奖特效：整屏撒花，档位越高铺得越满 --- */
 
 .burst {
   inset: 0;
+  overflow: hidden;
   pointer-events: none;
-  position: absolute;
+  position: fixed;
+  z-index: var(--z-burst);
 }
 
-.burst__bit {
-  animation: ribbon var(--life) cubic-bezier(0.16, 0.7, 0.3, 1) var(--delay) forwards;
-  background: var(--c);
-  border-radius: 1px;
-  height: 3px;
-  left: 50%;
+.burst__flash {
+  animation: burst-flash 700ms var(--ease) forwards;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--tier, var(--brand)) 40%, transparent),
+    transparent 38%
+  );
+  inset: 0;
   opacity: 0;
   position: absolute;
-  top: 50%;
-  width: var(--w);
 }
 
-@keyframes ribbon {
-  0% {
-    opacity: 1;
-    transform: translate(-50%, -50%) rotate(0deg) scale(0.4);
-  }
-  45% {
-    opacity: 1;
-    transform: translate(calc(-50% + var(--mx)), calc(-50% + var(--my))) rotate(calc(var(--rot) * 0.55)) scale(1);
-  }
-  75% {
+@keyframes burst-flash {
+  12% {
     opacity: 0.9;
   }
   100% {
     opacity: 0;
-    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(1);
   }
 }
 
-.tier-legend {
-  color: var(--text-muted);
-  display: flex;
-  flex-wrap: wrap;
-  font-size: var(--text-2xs);
-  gap: var(--space-1) var(--space-3);
-  justify-content: center;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.burst__bit {
+  background: var(--c);
+  border-radius: var(--r);
+  height: var(--h);
+  left: 0;
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  width: var(--w);
 }
 
-.tier-legend li {
-  align-items: center;
-  display: inline-flex;
-  gap: var(--space-1);
+.burst__drop {
+  animation: burst-fall var(--life) cubic-bezier(0.35, 0.05, 0.75, 0.9) var(--delay) forwards;
 }
 
-.tier-legend__dot {
-  background: var(--tier);
+.burst__shot {
+  animation: burst-shot var(--life) cubic-bezier(0.15, 0.7, 0.45, 1) var(--delay) forwards;
+}
+
+@keyframes burst-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--x0), -8vh, 0) rotate(0deg);
+  }
+  6% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.9;
+    transform: translate3d(calc(var(--x0) + var(--dx)), 108vh, 0) rotate(var(--rot));
+  }
+}
+
+@keyframes burst-shot {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--x0), 104vh, 0) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+  }
+  48% {
+    transform: translate3d(calc(var(--x0) + var(--dx) * 0.3), calc(104vh + var(--peak)), 0)
+      rotate(calc(var(--rot) * 0.4)) scale(1);
+  }
+  100% {
+    opacity: 0.85;
+    transform: translate3d(calc(var(--x0) + var(--dx)), 112vh, 0) rotate(var(--rot)) scale(1);
+  }
+}
+
+/* 金档以上在数字背后转一圈光芒。 */
+.rollbox__display[data-state="revealed"][data-tier="gold"]::before,
+.rollbox__display[data-state="revealed"][data-tier="red"]::before,
+.rollbox__display[data-state="revealed"][data-tier="rainbow"]::before {
+  animation: spin-rays 4.2s linear infinite;
+  background: repeating-conic-gradient(
+    from 0deg,
+    transparent 0deg 11deg,
+    color-mix(in srgb, var(--tier) 45%, transparent) 11deg 16deg
+  );
   border-radius: 50%;
-  height: 0.55rem;
-  width: 0.55rem;
+  content: "";
+  inset: -55%;
+  mask-image: radial-gradient(closest-side, #000 10%, transparent 72%);
+  opacity: 0.3;
+  pointer-events: none;
+  position: absolute;
 }
 
-.tier-legend li[data-tier="rainbow"] .tier-legend__dot {
-  background-image: conic-gradient(#ff3b3b, #ffae00, #35d07f, #2f9bff, #7b5cff, #ff3ba1, #ff3b3b);
+@keyframes spin-rays {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .rollbox__range {
@@ -317,11 +425,7 @@
   text-align: center;
 }
 
-.board {
-  max-height: 26rem;
-  overflow-y: auto;
-}
-
+/* 榜单不设高度上限，也不自带滚动条：多少人 Roll 都跟着页面这一个滚动条走。 */
 .board__list {
   display: grid;
   gap: var(--space-1);
@@ -333,9 +437,11 @@
 .board__row {
   align-items: center;
   border-radius: var(--radius);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 2.4rem;
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+  grid-template-columns: 2.6rem minmax(0, 1fr) auto;
   padding: var(--space-2) var(--space-3);
 }
 
@@ -356,6 +462,7 @@
 .board__rank {
   color: var(--text-faint);
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-xs);
   text-align: right;
 }
@@ -363,7 +470,10 @@
 .board__number {
   color: var(--tier, var(--text));
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
+  min-width: 3ch;
+  text-align: right;
 }
 
 .board__row[data-tier="rainbow"] .board__number {
@@ -397,8 +507,13 @@
 }
 
 .admin__nav {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   display: grid;
   gap: var(--space-1);
+  padding: var(--space-2);
   position: sticky;
   top: var(--space-5);
 }
@@ -415,11 +530,13 @@
   border-radius: var(--radius);
   color: var(--text-muted);
   display: flex;
+  font-size: var(--text-sm);
   font-weight: 600;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   text-decoration: none;
   white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 
 .admin__nav a:hover {
@@ -429,7 +546,9 @@
 
 .admin__nav a[aria-current="page"] {
   background: var(--brand-soft);
+  box-shadow: inset 2px 0 0 var(--brand);
   color: var(--brand);
+  padding-left: calc(var(--space-3) + 2px);
 }
 
 .admin__section {

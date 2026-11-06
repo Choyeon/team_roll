@@ -224,7 +224,7 @@ export const SessionsView = defineComponent({
       <div class="page-head">
         <div>
           <h1 style="margin:0">在线会话</h1>
-          <p class="muted" style="margin:0">同一账号只保留最新会话；这里可强制下线异常设备。</p>
+          <p class="muted" style="margin:0">同一账号只保留最新会话。这里可以强制下线其他设备。</p>
         </div>
         <div class="row">
           <button class="btn" type="button" @click="load">刷新</button>

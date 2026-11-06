@@ -92,6 +92,7 @@ def serialize(roll: RollResult, rank: int, *, admin_view: bool = False) -> dict[
     }
     if admin_view:
         payload["ip"] = roll.ip or ""
+        payload["user_agent"] = roll.user_agent or ""
         payload["void_reason"] = roll.void_reason or ""
         payload["created_by"] = roll.created_by.username if roll.created_by else ""
     return payload
@@ -151,7 +152,7 @@ def _assert_participant_slots(db: Session, activity: Activity, name: str) -> Non
         raise Conflict(f"本次活动仅限 {activity.max_participants} 人参与，名额已满")
 
 
-def submit(db: Session, activity: Activity, name: str, ip: str) -> tuple[RollResult, int]:
+def submit(db: Session, activity: Activity, name: str, ip: str, user_agent: str = "") -> tuple[RollResult, int]:
     """Serialise submits per activity.
 
     Number uniqueness has a partial unique index to fall back on; the
@@ -160,10 +161,10 @@ def submit(db: Session, activity: Activity, name: str, ip: str) -> tuple[RollRes
     the last slot. The deployment is single-worker, so a process lock is enough.
     """
     with _submit_lock(activity.id):
-        return _submit(db, activity, name, ip)
+        return _submit(db, activity, name, ip, user_agent)
 
 
-def _submit(db: Session, activity: Activity, name: str, ip: str) -> tuple[RollResult, int]:
+def _submit(db: Session, activity: Activity, name: str, ip: str, user_agent: str) -> tuple[RollResult, int]:
     """Allocate a fresh number for ``name``; retried on concurrent number collisions."""
     _assert_rollable(activity)
     _assert_participation_quota(db, activity, name)
@@ -180,6 +181,7 @@ def _submit(db: Session, activity: Activity, name: str, ip: str) -> tuple[RollRe
             name=name,
             number=number,
             ip=ip,
+            user_agent=user_agent,
             status=RollStatus.VALID,
             timestamp=utc_now(),
         )

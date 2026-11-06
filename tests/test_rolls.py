@@ -177,3 +177,21 @@ def test_admin_roll_list_is_an_envelope_with_admin_fields(admin_client):
     voided = admin_client.get(f"{PREFIX}/admin/activities/{activity_id}/rolls", params={"status": "void"}).json()
     assert voided["rolls"] == []
     admin_client.delete(f"{PREFIX}/admin/activities/{activity_id}")
+
+
+def test_player_agent_reaches_admins_only(admin_client):
+    """Same-office players share an exit IP, so the browser signature is what separates them."""
+    activity_id = create_activity(admin_client, roll_min=1, roll_max=10)
+    admin_client.post(
+        f"{PREFIX}/activities/{activity_id}/rolls",
+        json={"name": "签名玩家"},
+        headers={"user-agent": "Mozilla/5.0   TestBrowser/1.0"},
+    )
+
+    admin_row = admin_client.get(f"{PREFIX}/admin/activities/{activity_id}/rolls").json()["rolls"][0]
+    assert admin_row["user_agent"] == "Mozilla/5.0 TestBrowser/1.0"
+
+    public_row = admin_client.get(f"{PREFIX}/activities/{activity_id}/rolls").json()[0]
+    assert "user_agent" not in public_row
+    assert "ip" not in public_row
+    admin_client.delete(f"{PREFIX}/activities/{activity_id}")

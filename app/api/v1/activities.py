@@ -80,7 +80,7 @@ async def submit_roll(activity_id: str, body: RollSubmit, request: Request, db: 
         raise TooManyRequests(f"操作过于频繁，请 {retry_after} 秒后再试")
 
     activity = activity_service.get_or_404(db, activity_id)
-    roll, rank = roll_service.submit(db, activity, body.name, ip)
+    roll, rank = roll_service.submit(db, activity, body.name, ip, request.state.user_agent)
     serialized = roll_service.serialize(roll, rank)
 
     await request.app.state.ws_manager.broadcast(activity_id, {"type": "roll_result", "result": serialized})
