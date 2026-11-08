@@ -101,20 +101,15 @@ location /ws/ {
 
 健康检查：`GET /healthz`（数据库不可用时返回 503）。
 
-### choyeon 服务器（choyeon-panel 纳管）
+### 生产注意
 
-站点 <https://roll.choyeon.cc>，面板应用 `team-roll`（id 47，端口 8803）：
+演示站点：<https://roll.choyeon.cc>。
 
-```bash
-choyeonctl app deploy --id 47     # 拉 main 并重装依赖，随后重启 panel-team-roll.service
-systemctl restart panel-team-roll
-choyeonctl app logs --id 47
-```
-
-- 代码在 `/root/www/team_roll`，数据库在 `/var/lib/team_roll/team_roll.db`（刻意放在代码目录外，`git reset --hard` 碰不到）。
-- 生产参数写在 `/root/www/team_roll/.panel.env`（0600，unit 以 `EnvironmentFile` 读取），首启建管理员用的 `BOOTSTRAP_ADMIN_*` 已在建号后删除。
-- nginx 配置由面板生成在 `/etc/nginx/conf.d/panel-team-roll.conf`（已含 `Upgrade`/`Connection` 转发），证书由 certbot 装在同一文件；若重新 `choyeonctl app create` 会覆盖该文件，需要重跑 `certbot --nginx -d roll.choyeon.cc`。
-- 面板的备份任务目前只覆盖 rosetta 的 PG，`/var/lib/team_roll` 还没进自动备份，需要另建 SQLite 备份任务。
+- 数据库文件放在代码目录之外，避免 `git reset --hard` 或重新部署时碰到它。
+- 生产参数用 0600 权限的 env 文件注入（systemd `EnvironmentFile` 或 compose `env_file`）；`SECRET_KEY` 换成随机值，`BOOTSTRAP_ADMIN_*` 只保留到首次建号完成，之后立刻删掉。
+- 反向代理的证书签发工具往往会重写站点配置，重新签发后确认上面的 `Upgrade`/`Connection` 两个头还在。
+- 部署在反代之后时把 `TRUST_PROXY_HEADERS=true`，否则记录到的来源全是代理 IP。
+- SQLite 不在任何自动备份里，自己加一个定期备份任务；`GET /healthz` 可以接存活探测。
 
 ## API 摘要
 
@@ -131,3 +126,7 @@ choyeonctl app logs --id 47
 - 旧的 `main.py`/`database.py`/`templates/` 已归档到 `legacy/`，不再被引用，可随时删除。
 - 前端不再读取 `window` 上的一次性变量，Roll 记录一律经 JSON API 获取并作为文本渲染。
 - 端口保持 `8803`，与原部署一致。
+
+## 许可证
+
+[MIT](LICENSE)。
