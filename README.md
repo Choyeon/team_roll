@@ -3,6 +3,12 @@
 团队 Roll 点平台：参与者在一个数值区间内领取不重复的随机数，管理员负责活动全生命周期、记录修正与审计。
 FastAPI 提供 JSON API 与 WebSocket 实时通道，前端是无需构建步骤的 Vue 3 单页应用。
 
+[![CI](https://github.com/Choyeon/team_roll/actions/workflows/ci.yml/badge.svg)](https://github.com/Choyeon/team_roll/actions/workflows/ci.yml)
+[![License MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](pyproject.toml)
+
+在线演示：<https://roll.choyeon.cc>
+
 ## 功能
 
 - **Roll 点**：区间内去重发号（并发冲突自动重试）、每人参与上限、限定参与人数（满员后只有已上榜的名字还能继续 Roll，作废某人的全部记录即释放其名额）、作废后号码重新开放、按数值/时间/名字排序的实时排行榜（不限高度，跟随页面滚动）、开奖数字按区间百分位分七档只作配色（档位不向参与者解释，界面上不出现百分位说明）。
@@ -126,6 +132,18 @@ location /ws/ {
 - 旧的 `main.py`/`database.py`/`templates/` 已归档到 `legacy/`，不再被引用，可随时删除。
 - 前端不再读取 `window` 上的一次性变量，Roll 记录一律经 JSON API 获取并作为文本渲染。
 - 端口保持 `8803`，与原部署一致。
+
+## 贡献
+
+开发环境、门禁命令、代码与样式约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。CI 会在 Python 3.12 / 3.13 上跑 `ruff` 与 `pytest`。
+
+## 安全
+
+安全问题请走私享通道，见 [SECURITY.md](SECURITY.md)；里面也列了单 worker、SQLite 这些已知边界。
+
+## 第三方
+
+`static/vendor/vue.global.prod.js` 是 Vue v3.5.13 的官方生产构建（MIT，© 2018-present Yuxi (Evan) You and Vue contributors），直接随仓库分发以便免构建运行；其余依赖见 `requirements.txt`。
 
 ## 许可证
 

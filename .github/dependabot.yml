@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # requirements.txt 与 requirements-dev.txt 都是精确锁版本，
+  # 升级会走 PR，合并前由 CI 的 ruff + pytest 矩阵把关。
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3

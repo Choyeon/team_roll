@@ -1,0 +1,45 @@
+name: 问题反馈
+description: 报告 Bug、接口异常或界面错乱
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 发生了什么
+      description: 现象描述 + 复现路径（点哪个页面、填什么、期望结果、实际结果）
+      placeholder: |
+        1. 打开 /activity/{id}
+        2. 名字填「张三」，点 Roll
+        3. 期望：返回区间内不重复的数字
+        实际：提示「请求失败（500）」
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / commit
+      description: 自己部署的请填写 `git rev-parse --short HEAD`；在线站点可直接说 roll.choyeon.cc
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 运行环境
+      multiple: true
+      options:
+        - Docker / docker compose
+        - uvicorn 直接跑
+        - 反向代理（Nginx 等）
+        - 在线站点
+        - 其他
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志与截图
+      description: 后端 traceback、浏览器 Console、请求响应原文。记得先抹掉口令、会话 Cookie 和 `SECRET_KEY`
+      render: shell
+  - type: textarea
+    id: extras
+    attributes:
+      label: 补充信息
+      description: 环境变量取值（不要贴真实凭据）、活动区间、并发规模等
