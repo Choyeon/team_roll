@@ -54,7 +54,8 @@ def _prepared_database(app):
 
     settings = app.state.settings
     migrate.ensure_schema(settings, get_engine(settings))
-    admin_service.bootstrap_admin(get_sessionmaker()(), settings)
+    with get_sessionmaker()() as session:
+        admin_service.bootstrap_admin(session, settings)
     return app
 
 
@@ -67,7 +68,9 @@ def client(app):
 @pytest.fixture
 def anon_client(app):
     """A cookie-free client, for the not-logged-in and cross-account cases."""
-    yield TestClient(app)
+    test_client = TestClient(app)
+    yield test_client
+    test_client.close()
 
 
 @pytest.fixture(scope="session")

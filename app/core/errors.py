@@ -11,6 +11,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger("team_roll.errors")
 
+# starlette 老版本只导出 HTTP_422_UNPROCESSABLE_ENTITY（新版已弃用），
+# 新版本才补上 HTTP_422_UNPROCESSABLE_CONTENT，写字面值能同时避开两端的弃用告警。
+_VALIDATION_STATUS = 422
+
 
 class AppError(Exception):
     """Base class for expected, client-facing failures."""
@@ -72,7 +76,7 @@ class TooManyRequests(AppError):
 
 
 class ValidationFailed(AppError):
-    status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+    status_code = _VALIDATION_STATUS
     code = "validation_failed"
 
 
@@ -96,7 +100,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         ]
         return JSONResponse(
             _error_payload("validation_failed", "提交的数据不符合要求", {"fields": fields}),
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=_VALIDATION_STATUS,
         )
 
     @app.exception_handler(StarletteHTTPException)

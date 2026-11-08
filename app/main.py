@@ -46,7 +46,8 @@ async def lifespan(app: FastAPI):
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
 
-    created = admin_service.bootstrap_admin(get_sessionmaker()(), settings)
+    with get_sessionmaker()() as session:
+        created = admin_service.bootstrap_admin(session, settings)
     _log_startup_summary(settings, strategy, created)
     yield
     engine.dispose()
