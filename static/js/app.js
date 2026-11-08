@@ -118,7 +118,7 @@ async function boot() {
     store.me = null;
     store.auth = "anon";
     if (location.pathname.startsWith("/admin")) {
-      notify("登录状态已失效，请重新登录", "warn");
+      notify("登录状态已失效，请重新登录", "warning");
       guard();
     }
   });
@@ -130,7 +130,7 @@ async function boot() {
 
   const app = createApp(AppView);
   app.config.errorHandler = (err) => {
-    notify(err?.message || "界面出现异常", "error");
+    notify(err?.message || "界面出现异常", "danger");
     console.error(err);
   };
   app.mount("#app");

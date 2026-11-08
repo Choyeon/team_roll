@@ -23,7 +23,7 @@ async def list_activity_rolls(
     order: str = Query(default="number", pattern="^(number|time|name)$"),
 ) -> dict:
     activity = activity_service.get_or_404(db, activity_id)
-    stats = activity_service.stats_for(db, [activity_id])[activity_id]
+    stats = activity_service.stats_for(db, [activity_id]).get(activity_id, activity_service.RollStats())
     return {
         "activity": activity_service.serialize(activity, stats, admin_view=True),
         "stats": stats_service.activity_stats(db, activity),

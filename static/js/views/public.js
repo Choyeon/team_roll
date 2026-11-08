@@ -3,13 +3,13 @@
 import { api } from "../lib/api.js";
 import { login, notify } from "../lib/store.js";
 import { navigate, params as routeParams } from "../lib/router.js";
-import { STATUS_LABEL, dateTime, number, percent } from "../lib/format.js";
+import { STATUS_LABEL, dateTime, fillRate, number, percent, rangeSize, remainingNumbers } from "../lib/format.js";
 import { openActivitySocket } from "../lib/ws.js";
 import { computed, defineComponent, onBeforeUnmount, onMounted, ref, watch } from "../lib/vue.js";
 import { NumberReel } from "../components/reel.js";
 import { RibbonBurst } from "../components/burst.js";
 import { tierOf } from "../lib/tier.js";
-import { Busy, EmptyState, Pager, StatusPill } from "../components/ui.js";
+import { Alert, Busy, EmptyState, Pager, PageHead, StatusPill } from "../components/ui.js";
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -19,7 +19,7 @@ function sortRolls(list) {
 
 export const HomeView = defineComponent({
   name: "HomeView",
-  components: { Busy, EmptyState, Pager, StatusPill },
+  components: { Alert, Busy, EmptyState, Pager, StatusPill },
   setup() {
     const items = ref([]);
     const meta = ref({ page: 1, pages: 1, total: 0, page_size: 20 });
@@ -74,10 +74,6 @@ export const HomeView = defineComponent({
       load();
       loadActiveTotal();
     });
-    const ratio = (activity) => {
-      const size = activity.roll_max - activity.roll_min + 1;
-      return size ? Math.min(1, activity.roll_count / size) : 0;
-    };
     const filtered = computed(() => Boolean(status.value) || Boolean(q.value.trim()));
     return {
       items,
@@ -92,7 +88,8 @@ export const HomeView = defineComponent({
       search,
       showActive,
       clearFilters,
-      ratio,
+      fillRate,
+      remainingNumbers,
       STATUS_LABEL,
       dateTime,
       number,
@@ -127,7 +124,11 @@ export const HomeView = defineComponent({
       </div>
 
       <Busy v-if="loading" text="正在加载活动…"/>
-      <p v-else-if="error" class="pill pill--ended">{{ error }}</p>
+      <Alert v-else-if="error" tone="danger" :text="error">
+        <template #actions>
+          <button class="btn btn--sm" type="button" @click="load">重试</button>
+        </template>
+      </Alert>
       <EmptyState v-else-if="!items.length && filtered" text="没有符合筛选条件的活动。">
         <button class="btn btn--sm" type="button" @click="clearFilters">清除筛选</button>
       </EmptyState>
@@ -145,13 +146,13 @@ export const HomeView = defineComponent({
           <ul class="activity-card__meta">
             <li>区间 {{ number(activity.roll_min) }}-{{ number(activity.roll_max) }}</li>
             <li>已 Roll {{ number(activity.roll_count) }}</li>
-            <li>剩余 {{ number(activity.remaining_numbers) }}</li>
+            <li>剩余 {{ number(remainingNumbers(activity)) }}</li>
             <li>最高 {{ activity.top_number === null ? '—' : number(activity.top_number) }}</li>
-            <li>每人 {{ activity.max_participations }} 次</li>
+            <li>每人 {{ number(activity.max_participations) }} 次</li>
             <li v-if="activity.max_participants">限 {{ number(activity.max_participants) }} 人</li>
           </ul>
-          <div class="bar" role="img" :aria-label="'完成度 ' + percent(ratio(activity))">
-            <div class="bar__fill" :style="{ width: percent(ratio(activity)) }"></div>
+          <div class="bar" role="img" :aria-label="'完成度 ' + percent(fillRate(activity))">
+            <div class="bar__fill" :style="{ width: percent(fillRate(activity)) }"></div>
           </div>
         </article>
       </div>
@@ -162,12 +163,13 @@ export const HomeView = defineComponent({
 
 export const ActivityView = defineComponent({
   name: "ActivityView",
-  components: { Busy, NumberReel, RibbonBurst, StatusPill },
+  components: { Alert, Busy, EmptyState, NumberReel, PageHead, RibbonBurst, StatusPill },
   setup() {
     const activity = ref(null);
     const rolls = ref([]);
     const loading = ref(true);
     const missing = ref(false);
+    const error = ref("");
     const name = ref(localStorage.getItem("team-roll-name") || "");
     const busy = ref(false);
     const rolling = ref(false);
@@ -184,9 +186,8 @@ export const ActivityView = defineComponent({
 
     const id = computed(() => routeParams.value.activity_id);
     const range = computed(() => {
-      if (!activity.value) return { size: 0, filled: 0 };
-      const size = activity.value.roll_max - activity.value.roll_min + 1;
-      return { size, filled: activity.value.roll_count, ratio: size ? activity.value.roll_count / size : 0 };
+      const size = rangeSize(activity.value);
+      return { size, filled: activity.value ? activity.value.roll_count : 0 };
     });
     const reelDigits = computed(() => (activity.value ? String(activity.value.roll_max).length : 2));
     const displayState = computed(() => {
@@ -244,8 +245,6 @@ export const ActivityView = defineComponent({
         ...activity.value,
         roll_count: rolls.value.length,
         participants: new Set(rolls.value.map((roll) => roll.name)).size,
-        remaining_numbers: Math.max(0, range.value.size - rolls.value.length),
-        top_number: rolls.value.length ? rolls.value[0].number : null,
       };
     }
 
@@ -287,13 +286,14 @@ export const ActivityView = defineComponent({
     async function load() {
       loading.value = true;
       missing.value = false;
+      error.value = "";
       try {
         const data = await api.get(`/activities/${id.value}`);
         activity.value = data;
         rolls.value = sortRolls(await api.get(`/activities/${id.value}/rolls`, { status: "valid", order: "number" }));
       } catch (err) {
         if (err.status === 404 || err.status === 410) missing.value = true;
-        else notify(err.message, "error");
+        else error.value = err.message;
       } finally {
         loading.value = false;
       }
@@ -302,7 +302,7 @@ export const ActivityView = defineComponent({
     async function rollTheDice() {
       const trimmed = name.value.trim();
       if (!trimmed) {
-        notify("请先输入你的名字", "warn");
+        notify("请先输入你的名字", "warning");
         return;
       }
       localStorage.setItem("team-roll-name", trimmed);
@@ -331,7 +331,7 @@ export const ActivityView = defineComponent({
       } catch (err) {
         reeling.value = false;
         rolling.value = false;
-        notify(err.message, "error", 6000);
+        notify(err.message, "danger", 6000);
       } finally {
         busy.value = false;
         if (!reeling.value) rolling.value = false;
@@ -381,16 +381,17 @@ export const ActivityView = defineComponent({
       rolling.value = false;
       reelTarget.value = "";
       burst.value = 0;
+      error.value = "";
       pending = null;
       load();
       connect();
     });
 
     return {
-      activity, rolls, loading, missing, name, busy, rolling, reeling, rollSeq, reelTarget, burst,
+      activity, rolls, loading, missing, error, name, busy, rolling, reeling, rollSeq, reelTarget, burst,
       display, mine, fresh, socketStatus, connections, range, reelDigits, displayState, revealTier,
       rollTier, canRoll, blockReason, load, rollTheDice, onLanded,
-      STATUS_LABEL, dateTime, number,
+      STATUS_LABEL, dateTime, fillRate, number, percent, remainingNumbers,
     };
   },
   template: `
@@ -402,27 +403,28 @@ export const ActivityView = defineComponent({
         <a class="btn btn--primary" href="/" data-link>返回活动列表</a>
       </section>
 
+      <Alert v-else-if="error" tone="danger" :text="error">
+        <template #actions>
+          <button class="btn btn--sm" type="button" @click="load">重试</button>
+          <a class="btn btn--sm" href="/" data-link>返回活动列表</a>
+        </template>
+      </Alert>
+
       <div v-else-if="activity" class="stack">
         <RibbonBurst v-if="burst && revealTier" :key="burst" :tier="revealTier.key"/>
 
-        <header class="page-head">
-          <div class="stack-tight">
-            <div class="row">
-              <h1>{{ activity.name }}</h1>
-              <StatusPill :value="activity.status" :label="STATUS_LABEL[activity.status]"/>
-            </div>
-            <p class="muted">
-              区间 {{ number(activity.roll_min) }}-{{ number(activity.roll_max) }} · 每人最多 {{ activity.max_participations }} 次 ·
-              <template v-if="activity.max_participants">限 {{ number(activity.max_participants) }} 人 ·</template>
-              创建于 {{ dateTime(activity.created_at) }}
-            </p>
-          </div>
+        <PageHead>
+          <template #title>{{ activity.name }}</template>
+          <template #badge><StatusPill :value="activity.status" :label="STATUS_LABEL[activity.status]"/></template>
+          <template #subtitle>
+            区间 {{ number(activity.roll_min) }}-{{ number(activity.roll_max) }} · 每人最多 {{ number(activity.max_participations) }} 次<template v-if="activity.max_participants"> · 限 {{ number(activity.max_participants) }} 人</template> · 创建于 {{ dateTime(activity.created_at) }}
+          </template>
           <a class="btn btn--ghost" href="/" data-link>返回列表</a>
-        </header>
+        </PageHead>
 
-        <p v-if="activity.description" class="card muted">{{ activity.description }}</p>
+        <p v-if="activity.description" class="card description">{{ activity.description }}</p>
 
-        <div v-if="blockReason" class="pill pill--paused" role="status">{{ blockReason }}</div>
+        <Alert v-if="blockReason" tone="warning" :text="blockReason"/>
 
         <div class="roll-hero">
           <section class="card rollbox" :data-quake="burst ? 'true' : null" aria-label="Roll 点">
@@ -432,9 +434,15 @@ export const ActivityView = defineComponent({
                           :label="display" @landed="onLanded"/>
               <span v-else class="reveal">{{ display || '等待 Roll 点' }}</span>
             </div>
-            <p class="rollbox__range" v-if="mine && !rolling">
-              {{ mine.name }}：{{ number(mine.number) }}，当前第 {{ mine.rank }} 名
+            <p class="rollbox__result" v-if="mine && !rolling">
+              {{ mine.name }}：{{ number(mine.number) }}，当前第 {{ number(mine.rank) }} 名
             </p>
+            <dl class="defs rollbox__facts">
+              <div><dt>已 Roll</dt><dd>{{ number(range.filled) }}</dd></div>
+              <div><dt>剩余数值</dt><dd>{{ number(remainingNumbers(activity)) }}</dd></div>
+              <div><dt>当前最高</dt><dd>{{ rolls.length ? number(rolls[0].number) : '—' }}</dd></div>
+              <div><dt>完成度</dt><dd>{{ percent(fillRate(activity), 1) }}</dd></div>
+            </dl>
             <label class="field">
               <span class="field__label">你的名字</span>
               <input id="player-name" class="input" v-model="name" maxlength="32" autocomplete="nickname"
@@ -444,45 +452,37 @@ export const ActivityView = defineComponent({
               <span v-if="busy" class="spinner" aria-hidden="true"></span>
               {{ busy ? 'Roll 中…' : (rolling ? '开奖中…' : (display ? '再 Roll 一次' : '开始 Roll 点')) }}
             </button>
-            <div class="row row--center text-xs">
-              <span class="presence">
-                <span class="dot" :class="socketStatus === 'online' ? 'dot--on' : 'dot--off'" aria-hidden="true"></span>
-                {{ socketStatus === 'online' ? '实时同步已连接' : '实时同步重连中' }} · 在线 {{ connections }} 人
-              </span>
-            </div>
+            <p class="presence">
+              <span class="dot" :class="socketStatus === 'online' ? 'dot--on' : 'dot--off'" aria-hidden="true"></span>
+              {{ socketStatus === 'online' ? '实时同步已连接' : '实时同步重连中' }} · 在线 {{ number(connections) }} 人
+            </p>
           </section>
 
           <section class="card card--pad-none">
             <div class="card__head">
               <h2>实时排行</h2>
-              <span class="muted text-xs">
-                {{ number(range.filled) }}/{{ number(range.size) }} 个数值已 Roll · {{ number(activity.participants) }} 人
-              </span>
+              <span class="muted text-xs">按数值从高到低 · {{ number(activity.participants) }} 人上榜</span>
             </div>
             <div class="card__body">
-              <ol class="board__list">
+              <ol v-if="rolls.length" class="board__list">
                 <li v-for="roll in rolls" :key="roll.id" class="board__row" :data-new="fresh === roll.id"
                     :data-tier="rollTier(roll.number)">
-                  <span class="board__rank">#{{ roll.rank }}</span>
+                  <span class="board__rank">#{{ number(roll.rank) }}</span>
                   <span class="truncate">{{ roll.name }}</span>
                   <span class="board__number">{{ number(roll.number) }}</span>
                 </li>
               </ol>
-              <p v-if="!rolls.length" class="state">还没有人 Roll 点。</p>
+              <EmptyState v-else text="还没有人 Roll 点，第一个数字就归你。"/>
             </div>
           </section>
         </div>
       </div>
-
-      <section v-else class="card center">
-        <p class="muted">加载失败。</p>
-        <button class="btn" type="button" @click="load">重试</button>
-      </section>
     </div>`,
 });
 
 export const LoginView = defineComponent({
   name: "LoginView",
+  components: { Alert },
   setup() {
     const username = ref("");
     const password = ref("");
@@ -520,7 +520,7 @@ export const LoginView = defineComponent({
           <span class="field__label">密码</span>
           <input id="password" class="input" type="password" v-model="password" autocomplete="current-password" required>
         </label>
-        <p v-if="error" class="field__error" role="alert">{{ error }}</p>
+        <Alert v-if="error" tone="danger" :text="error"/>
         <button class="btn btn--primary btn-block" type="submit" :disabled="busy">
           <span v-if="busy" class="spinner" aria-hidden="true"></span>{{ busy ? '登录中…' : '登录' }}
         </button>

@@ -114,12 +114,27 @@
 /* 开奖框里的表单和按钮铺满整格，手机上不用瞄准。
    开奖数字居中，但字段标签跟着输入框左对齐，别悬在中间。 */
 .rollbox .field,
-.rollbox .btn--roll {
+.rollbox .btn--roll,
+.rollbox .rollbox__facts {
   width: 100%;
 }
 
 .rollbox .field {
   text-align: start;
+}
+
+/* 参与者最关心的四个数就在按钮上方，跟着开奖框一起吸住。
+   手机两列两行，平板起一列四格；用固定列数，避免第四个数掉到第二行变孤儿。
+   .defs 在本文件后面还有一条 auto-fit 规则，所以这里必须用两条类名选它。 */
+.rollbox .rollbox__facts {
+  gap: var(--space-2) var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 48rem) {
+  .rollbox .rollbox__facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .rollbox[data-quake="true"] {
@@ -436,9 +451,15 @@
   }
 }
 
-.rollbox__range {
+.rollbox__result {
   color: var(--text-muted);
   font-size: var(--text-sm);
+}
+
+/* 管理员填的活动说明：换行要保住，所以用 pre-wrap 而不是当成一行小字。 */
+.description {
+  color: var(--text-muted);
+  white-space: pre-wrap;
 }
 
 /* --- 摇奖机式数字滚轮：窗口正好一个数字高，靠 translateY 走带 --- */
@@ -665,11 +686,6 @@
   .page-head > .row > .field {
     flex: 1 1 auto;
   }
-
-  /* 直接挂在标题区的返回类按钮保持胶囊宽度，别被 stretch 拉成整行。 */
-  .page-head > .btn {
-    align-self: flex-start;
-  }
 }
 
 /* --- charts (hand-written SVG) --- */
@@ -815,10 +831,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 手机上两列一排，桌面自动铺到五列；10.5rem 会让 375px 只放得下一列，五个数字要滑五屏。 */
 .kpi-grid {
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(min(10.5rem, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(8.5rem, 100%), 1fr));
 }
 
 /* --- login --- */

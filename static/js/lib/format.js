@@ -13,6 +13,8 @@ const nf = new Intl.NumberFormat("zh-CN");
 export const STATUS_LABEL = { active: "进行中", paused: "已暂停", ended: "已结束" };
 export const ROLL_STATUS_LABEL = { valid: "有效", void: "已作废" };
 export const ROLE_LABEL = { super: "超级管理员", admin: "管理员", viewer: "只读" };
+/* 状态的色调也只有一个出处：图表、徽章、说明文字都读它。 */
+export const STATUS_TONE = { active: "var(--success)", paused: "var(--warning)", ended: "var(--danger)" };
 
 /** Backend datetimes are aware UTC; parse defensively for older naive values. */
 function toDate(value) {
@@ -59,6 +61,22 @@ export function number(value) {
 export function percent(value, digits = 0) {
   if (value === null || value === undefined) return "—";
   return `${(value * 100).toFixed(digits)}%`;
+}
+
+/* --- 活动区间的口径：卡片、详情页、后台列表都从这三个函数取值，别在模板里重算 --- */
+
+export function rangeSize(activity) {
+  if (!activity) return 0;
+  return Math.max(0, activity.roll_max - activity.roll_min + 1);
+}
+
+export function fillRate(activity) {
+  const size = rangeSize(activity);
+  return size ? Math.min(1, (activity.roll_count || 0) / size) : 0;
+}
+
+export function remainingNumbers(activity) {
+  return Math.max(0, rangeSize(activity) - (activity.roll_count || 0));
 }
 
 export function bytes(value) {

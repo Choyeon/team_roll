@@ -752,15 +752,20 @@
   padding: var(--space-2) var(--space-3);
 }
 
+/* 色调只有一套词：info / success / warning / danger，toast 和 alert 共用。 */
+.toast--info {
+  border-left-color: var(--info);
+}
+
 .toast--success {
   border-left-color: var(--success);
 }
 
-.toast--error {
+.toast--danger {
   border-left-color: var(--danger);
 }
 
-.toast--warn {
+.toast--warning {
   border-left-color: var(--warning);
 }
 
@@ -772,6 +777,70 @@
   font-size: var(--text-lg);
   line-height: 1;
   margin-inline-start: auto;
+}
+
+/* --- inline alerts --- */
+
+/* 页面内的常驻提示：软底色 + 左侧色条 + 色调文字，和 pill、toast 是同一套语言。
+   以前这类提示直接借用 .pill，而 .pill 是行内徽章，撑不成一条能放按钮的横幅。 */
+.alert {
+  align-items: center;
+  background: var(--info-soft);
+  border: 1px solid var(--info);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  color: var(--info);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.alert > * {
+  margin: 0;
+  min-width: 0;
+}
+
+.alert--danger {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.alert--warning {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.alert--success {
+  background: var(--success-soft);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+/* 正文吃掉剩余宽度，操作永远靠右；窄屏上两者各自换行。 */
+.alert__body {
+  flex: 1 1 14rem;
+}
+
+.alert__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+@media (max-width: 30rem) {
+  .alert__actions {
+    width: 100%;
+  }
+
+  .alert__actions > .btn {
+    flex: 1 1 8rem;
+  }
 }
 
 /* --- tabs & pager --- */

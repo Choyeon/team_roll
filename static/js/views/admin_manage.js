@@ -1,11 +1,20 @@
 /* Admin screens for accounts, sessions, audit trail, export and system health. */
 
 import { api } from "../lib/api.js";
-import { run } from "../lib/action.js";
-import { can, loadSession, notify } from "../lib/store.js";
+import { run, tryLoad } from "../lib/action.js";
+import { can, loadSession } from "../lib/store.js";
 import { ROLE_LABEL, bytes, dateTime, duration, jsonDetail, number } from "../lib/format.js";
 import { defineComponent, onMounted, ref } from "../lib/vue.js";
-import { AppModal, Busy, ConfirmDialog, EmptyState, Pager, StatusPill } from "../components/ui.js";
+import {
+  Alert,
+  AppModal,
+  Busy,
+  ConfirmDialog,
+  ListCard,
+  PageHead,
+  Pager,
+  StatusPill,
+} from "../components/ui.js";
 
 const ROLES = [
   { value: "super", label: "超级管理员（可管理账号）" },
@@ -19,10 +28,11 @@ function emptyAdmin() {
 
 export const AdminsView = defineComponent({
   name: "AdminsView",
-  components: { AppModal, Busy, ConfirmDialog, StatusPill },
+  components: { Alert, AppModal, ConfirmDialog, ListCard, PageHead, StatusPill },
   setup() {
     const items = ref([]);
     const loading = ref(true);
+    const error = ref("");
     const editing = ref(null);
     const form = ref(emptyAdmin());
     const formError = ref("");
@@ -31,7 +41,7 @@ export const AdminsView = defineComponent({
 
     async function load() {
       loading.value = true;
-      const payload = await run(() => api.get("/admin/admins"));
+      const payload = await tryLoad(error, () => api.get("/admin/admins"));
       if (payload) items.value = payload;
       loading.value = false;
     }
@@ -103,53 +113,48 @@ export const AdminsView = defineComponent({
 
     onMounted(load);
     return {
-      items, loading, editing, form, formError, busy, removing, ROLES,
+      items, loading, error, editing, form, formError, busy, removing, ROLES,
       load, openCreate, openEdit, save, remove, ROLE_LABEL, dateTime, number, can,
     };
   },
   template: `
     <section class="admin__section stack">
-      <div class="page-head">
-        <div>
-          <h1>管理员账号</h1>
-          <p class="muted">仅超级管理员可见；停用账号会立即下线其全部会话。</p>
-        </div>
+      <PageHead title="管理员账号" subtitle="仅超级管理员可见；停用账号会立即下线其全部会话。">
+        <button v-if="can('manage_admins')" class="btn" type="button" @click="load">刷新</button>
         <button v-if="can('manage_admins')" class="btn btn--primary" type="button" @click="openCreate">新建账号</button>
-      </div>
+      </PageHead>
 
-      <p v-if="!can('manage_admins')" class="pill pill--paused" role="status">当前角色无权管理账号，请联系超级管理员。</p>
+      <Alert v-if="!can('manage_admins')" tone="warning"
+             text="当前角色无权管理账号，请联系超级管理员。"/>
 
-      <Busy v-if="loading" text="正在加载账号…"/>
-      <div v-else-if="can('manage_admins')" class="card card--pad-none">
-        <div class="table-wrap">
-          <table class="table">
-            <caption class="sr-only">管理员列表</caption>
-            <thead>
-              <tr><th>用户名</th><th class="is-secondary">昵称</th><th>角色</th><th>状态</th><th>最近登录</th><th class="is-secondary">失败次数</th><th></th></tr>
-            </thead>
-            <tbody>
-              <tr v-for="admin in items" :key="admin.id">
-                <td data-label="用户名" class="strong">{{ admin.username }}</td>
-                <td data-label="昵称" class="is-secondary">{{ admin.display_name || '—' }}</td>
-                <td data-label="角色"><StatusPill :value="admin.role === 'super' ? 'active' : 'neutral'" :label="ROLE_LABEL[admin.role]"/></td>
-                <td data-label="状态"><StatusPill :value="admin.is_active ? 'valid' : 'void'" :label="admin.is_active ? '启用' : '停用'"/></td>
-                <td data-label="最近登录" class="multi nowrap">{{ admin.last_login_at ? dateTime(admin.last_login_at) : '从未' }}<span class="cell-sub mono">{{ admin.last_login_ip || '' }}</span></td>
-                <td data-label="失败次数" class="num is-secondary">
-                  {{ admin.failed_login_count }}
-                  <span v-if="admin.locked_until" class="cell-sub">锁定至 {{ dateTime(admin.locked_until) }}</span>
-                </td>
-                <td>
-                  <div class="table__actions">
-                    <button class="btn btn--sm" type="button" @click="openEdit(admin)">编辑</button>
-                    <button class="btn btn--sm btn--danger" type="button" @click="removing = admin">删除</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <EmptyState v-if="!items.length" text="没有账号。"/>
-      </div>
+      <ListCard v-else title="管理员列表" :count="items.length" :loading="loading"
+               loading-text="正在加载账号…" :error="error" empty-text="还没有账号。" @retry="load">
+        <table class="table">
+          <caption class="sr-only">管理员列表</caption>
+          <thead>
+            <tr><th>用户名</th><th class="is-secondary">昵称</th><th>角色</th><th>状态</th><th>最近登录</th><th class="is-secondary">失败次数</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="admin in items" :key="admin.id">
+              <td data-label="用户名" class="strong">{{ admin.username }}</td>
+              <td data-label="昵称" class="is-secondary">{{ admin.display_name || '—' }}</td>
+              <td data-label="角色"><StatusPill :value="admin.role === 'super' ? 'brand' : 'neutral'" :label="ROLE_LABEL[admin.role]"/></td>
+              <td data-label="状态"><StatusPill :value="admin.is_active ? 'valid' : 'void'" :label="admin.is_active ? '启用' : '停用'"/></td>
+              <td data-label="最近登录" class="multi nowrap">{{ admin.last_login_at ? dateTime(admin.last_login_at) : '从未' }}<span class="cell-sub mono">{{ admin.last_login_ip || '' }}</span></td>
+              <td data-label="失败次数" class="num is-secondary">
+                {{ number(admin.failed_login_count) }}
+                <span v-if="admin.locked_until" class="cell-sub">锁定至 {{ dateTime(admin.locked_until) }}</span>
+              </td>
+              <td>
+                <div class="table__actions">
+                  <button class="btn btn--sm" type="button" @click="openEdit(admin)">编辑</button>
+                  <button class="btn btn--sm btn--danger" type="button" @click="removing = admin">删除</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </ListCard>
 
       <AppModal v-if="editing" :title="editing.mode === 'create' ? '新建账号' : '编辑账号'" @close="editing = null">
         <div class="stack">
@@ -178,7 +183,7 @@ export const AdminsView = defineComponent({
             <span>账号启用（停用会立即下线其会话）</span>
           </label>
           <p class="faint text-xs">密码使用 pbkdf2_sha256 加盐存储；连续登录失败会临时锁定账号。</p>
-          <p v-if="formError" class="field__error" role="alert">{{ formError }}</p>
+          <Alert v-if="formError" tone="danger" :text="formError"/>
         </div>
         <template #footer>
           <button class="btn" type="button" @click="editing = null">取消</button>
@@ -194,14 +199,15 @@ export const AdminsView = defineComponent({
 
 export const SessionsView = defineComponent({
   name: "SessionsView",
-  components: { Busy, EmptyState, StatusPill },
+  components: { ListCard, PageHead, StatusPill },
   setup() {
     const items = ref([]);
     const loading = ref(true);
+    const error = ref("");
 
     async function load() {
       loading.value = true;
-      const payload = await run(() => api.get("/admin/sessions"));
+      const payload = await tryLoad(error, () => api.get("/admin/sessions"));
       if (payload) items.value = payload;
       loading.value = false;
     }
@@ -215,64 +221,56 @@ export const SessionsView = defineComponent({
     }
 
     onMounted(load);
-    return { items, loading, load, revoke, revokeOthers, dateTime, can };
+    return { items, loading, error, load, revoke, revokeOthers, dateTime, can };
   },
   template: `
     <section class="admin__section stack">
-      <div class="page-head">
-        <div>
-          <h1>在线会话</h1>
-          <p class="muted">同一账号只保留最新会话。这里可以强制下线其他设备。</p>
-        </div>
-        <div class="row">
-          <button class="btn" type="button" @click="load">刷新</button>
-          <button v-if="can('manage')" class="btn btn--danger" type="button" @click="revokeOthers">下线我的其他会话</button>
-        </div>
-      </div>
+      <PageHead title="在线会话" subtitle="同一账号只保留最新会话。这里可以强制下线其他设备。">
+        <button class="btn" type="button" @click="load">刷新</button>
+        <button v-if="can('manage')" class="btn btn--danger" type="button" @click="revokeOthers">下线我的其他会话</button>
+      </PageHead>
 
-      <Busy v-if="loading" text="正在加载会话…"/>
-      <div v-else class="card card--pad-none">
-        <div class="table-wrap">
-          <table class="table">
-            <caption class="sr-only">会话列表</caption>
-            <thead><tr><th>账号</th><th>IP</th><th class="is-secondary">登录时间</th><th>最近活动</th><th class="is-secondary">过期</th><th>设备</th><th></th></tr></thead>
-            <tbody>
-              <tr v-for="session in items" :key="session.id">
-                <td data-label="账号">{{ session.username }}<StatusPill v-if="session.current" value="brand" label="当前"/></td>
-                <td data-label="IP" class="mono faint">{{ session.ip || '—' }}</td>
-                <td data-label="登录时间" class="nowrap is-secondary">{{ dateTime(session.created_at) }}</td>
-                <td data-label="最近活动" class="nowrap">{{ dateTime(session.last_seen_at) }}</td>
-                <td data-label="过期" class="nowrap is-secondary">{{ dateTime(session.expires_at) }}</td>
-                <td data-label="设备" class="cell-sub--wide truncate" :title="session.user_agent">{{ session.user_agent || '—' }}</td>
-                <td>
-                  <div class="table__actions">
-                    <button v-if="!session.current && can('manage')" class="btn btn--sm btn--danger" type="button" @click="revoke(session)">强制下线</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <EmptyState v-if="!items.length" text="没有活跃会话。"/>
-      </div>
+      <ListCard title="会话列表" :count="items.length" :loading="loading"
+                loading-text="正在加载会话…" :error="error" empty-text="没有活跃会话。" @retry="load">
+        <table class="table">
+          <caption class="sr-only">会话列表</caption>
+          <thead><tr><th>账号</th><th>IP</th><th class="is-secondary">登录时间</th><th>最近活动</th><th class="is-secondary">过期</th><th>设备</th><th></th></tr></thead>
+          <tbody>
+            <tr v-for="session in items" :key="session.id">
+              <td data-label="账号">{{ session.username }}<StatusPill v-if="session.current" value="brand" label="当前"/></td>
+              <td data-label="IP" class="mono faint">{{ session.ip || '—' }}</td>
+              <td data-label="登录时间" class="nowrap is-secondary">{{ dateTime(session.created_at) }}</td>
+              <td data-label="最近活动" class="nowrap">{{ dateTime(session.last_seen_at) }}</td>
+              <td data-label="过期" class="nowrap is-secondary">{{ dateTime(session.expires_at) }}</td>
+              <td data-label="设备" class="cell-sub--wide truncate" :title="session.user_agent">{{ session.user_agent || '—' }}</td>
+              <td>
+                <div class="table__actions">
+                  <button v-if="!session.current && can('manage')" class="btn btn--sm btn--danger" type="button" @click="revoke(session)">强制下线</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </ListCard>
     </section>`,
 });
 
 export const AuditView = defineComponent({
   name: "AuditView",
-  components: { Busy, ConfirmDialog, EmptyState, Pager },
+  components: { ConfirmDialog, ListCard, PageHead, Pager },
   setup() {
     const items = ref([]);
     const meta = ref({ page: 1, pages: 1, total: 0, page_size: 50 });
     const actions = ref([]);
     const filters = ref({ q: "", action: "", actor: "", date_from: "", date_to: "" });
     const loading = ref(true);
+    const error = ref("");
     const purging = ref(false);
     const purgeDays = ref(90);
 
     async function load(page = 1) {
       loading.value = true;
-      const payload = await run(() => api.get("/admin/audit-logs", { ...filters.value, page, page_size: 50 }));
+      const payload = await tryLoad(error, () => api.get("/admin/audit-logs", { ...filters.value, page, page_size: 50 }));
       if (payload) {
         items.value = payload.items;
         meta.value = payload.meta;
@@ -295,20 +293,14 @@ export const AuditView = defineComponent({
       loadActions();
       load(1);
     });
-    return { items, meta, actions, filters, loading, purging, purgeDays, load, purge, dateTime, jsonDetail, can };
+    return { items, meta, actions, filters, loading, error, purging, purgeDays, load, purge, dateTime, jsonDetail, number, can };
   },
   template: `
     <section class="admin__section stack">
-      <div class="page-head">
-        <div>
-          <h1>审计日志</h1>
-          <p class="muted">记录建活动、改规则、作废记录、账号变更等管理动作。</p>
-        </div>
-        <div class="row">
-          <a class="btn" href="/api/v1/admin/export/audit.csv">导出 CSV</a>
-          <button v-if="can('dangerous')" class="btn btn--danger" type="button" @click="purging = true">清理旧日志</button>
-        </div>
-      </div>
+      <PageHead title="审计日志" subtitle="记录建活动、改规则、作废记录、账号变更等管理动作。">
+        <a class="btn" href="/api/v1/admin/export/audit.csv" download>导出 CSV</a>
+        <button v-if="can('dangerous')" class="btn btn--danger" type="button" @click="purging = true">清理旧日志</button>
+      </PageHead>
 
       <div class="filters card">
         <label class="field">
@@ -337,27 +329,25 @@ export const AuditView = defineComponent({
         <button class="btn" type="button" @click="load(1)">查询</button>
       </div>
 
-      <Busy v-if="loading" text="正在加载日志…"/>
-      <div v-else class="card card--pad-none">
-        <div class="table-wrap">
-          <table class="table">
-            <caption class="sr-only">审计日志</caption>
-            <thead><tr><th>时间</th><th>操作</th><th>管理员</th><th class="is-secondary">对象</th><th class="is-secondary">IP</th><th>详情</th></tr></thead>
-            <tbody>
-              <tr v-for="row in items" :key="row.id">
-                <td data-label="时间" class="nowrap">{{ dateTime(row.created_at) }}</td>
-                <td data-label="操作" class="mono">{{ row.action }}</td>
-                <td data-label="管理员">{{ row.actor_label }}</td>
-                <td data-label="对象" class="mono faint is-secondary">{{ row.target_type }}<template v-if="row.target_id"> · {{ row.target_id }}</template></td>
-                <td data-label="IP" class="mono faint is-secondary">{{ row.ip || '—' }}</td>
-                <td data-label="详情"><details v-if="row.detail"><summary class="faint">查看</summary>
-                  <pre class="audit-detail">{{ jsonDetail(row.detail) }}</pre></details><span v-else>—</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <EmptyState v-if="!items.length" text="没有符合条件的日志。"/>
-      </div>
+      <ListCard :count="items.length" :loading="loading" loading-text="正在加载日志…"
+                :error="error" empty-text="没有符合条件的日志。" @retry="load(1)">
+        <template #head><span class="muted text-xs">共 {{ number(meta.total) }} 条</span></template>
+        <table class="table">
+          <caption class="sr-only">审计日志</caption>
+          <thead><tr><th>时间</th><th>操作</th><th>管理员</th><th class="is-secondary">对象</th><th class="is-secondary">IP</th><th>详情</th></tr></thead>
+          <tbody>
+            <tr v-for="row in items" :key="row.id">
+              <td data-label="时间" class="nowrap">{{ dateTime(row.created_at) }}</td>
+              <td data-label="操作" class="mono">{{ row.action }}</td>
+              <td data-label="管理员">{{ row.actor_label }}</td>
+              <td data-label="对象" class="mono faint is-secondary">{{ row.target_type }}<template v-if="row.target_id"> · {{ row.target_id }}</template></td>
+              <td data-label="IP" class="mono faint is-secondary">{{ row.ip || '—' }}</td>
+              <td data-label="详情"><details v-if="row.detail"><summary class="faint">查看</summary>
+                <pre class="audit-detail">{{ jsonDetail(row.detail) }}</pre></details><span v-else>—</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </ListCard>
 
       <Pager v-if="meta.pages > 1" :meta="meta" @go="load"/>
 
@@ -377,15 +367,20 @@ export const AuditView = defineComponent({
 
 export const ExportView = defineComponent({
   name: "ExportView",
+  components: { Alert, PageHead },
   setup() {
     const activities = ref([]);
     const activityId = ref("");
     const rollStatus = ref("all");
+    const error = ref("");
 
-    onMounted(async () => {
-      const payload = await run(() => api.get("/admin/activities", { page_size: 100 }));
+    async function load() {
+      error.value = "";
+      const payload = await tryLoad(error, () => api.get("/admin/activities", { page_size: 100 }));
       if (payload) activities.value = payload.items;
-    });
+    }
+
+    onMounted(load);
 
     function rollsUrl() {
       const query = new URLSearchParams({ status: rollStatus.value });
@@ -393,22 +388,23 @@ export const ExportView = defineComponent({
       return `/api/v1/admin/export/rolls.csv?${query}`;
     }
 
-    return { activities, activityId, rollStatus, rollsUrl };
+    return { activities, activityId, rollStatus, error, load, rollsUrl };
   },
   template: `
     <section class="admin__section stack">
-      <div class="page-head">
-        <div>
-          <h1>数据导出</h1>
-          <p class="muted">CSV 带 UTF-8 BOM，Excel 直接打开不乱码；快照 JSON 适合做迁移备份。</p>
-        </div>
-      </div>
+      <PageHead title="数据导出" subtitle="CSV 带 UTF-8 BOM，Excel 直接打开不乱码；快照 JSON 适合做迁移备份。"/>
+
+      <Alert v-if="error" tone="danger" :text="error">
+        <template #actions>
+          <button class="btn btn--sm" type="button" @click="load">重试</button>
+        </template>
+      </Alert>
 
       <div class="export-grid">
         <div class="card stack-tight">
           <h2>活动清单</h2>
           <p class="muted">全部活动及统计字段。</p>
-          <a class="btn btn--primary" href="/api/v1/admin/export/activities.csv">下载 activities.csv</a>
+          <a class="btn btn--primary" href="/api/v1/admin/export/activities.csv" download>下载 activities.csv</a>
         </div>
         <div class="card stack-tight">
           <h2>Roll 记录</h2>
@@ -427,17 +423,17 @@ export const ExportView = defineComponent({
               <option value="void">仅作废</option>
             </select>
           </label>
-          <a class="btn btn--primary" :href="rollsUrl()">下载 rolls.csv</a>
+          <a class="btn btn--primary" :href="rollsUrl()" download>下载 rolls.csv</a>
         </div>
         <div class="card stack-tight">
           <h2>审计日志</h2>
           <p class="muted">全部管理操作流水。</p>
-          <a class="btn btn--primary" href="/api/v1/admin/export/audit.csv">下载 audit-log.csv</a>
+          <a class="btn btn--primary" href="/api/v1/admin/export/audit.csv" download>下载 audit-log.csv</a>
         </div>
         <div class="card stack-tight">
           <h2>完整快照</h2>
           <p class="muted">活动 + Roll 历史的 JSON，可跨环境恢复。</p>
-          <a class="btn btn--primary" href="/api/v1/admin/export/snapshot.json">下载 snapshot.json</a>
+          <a class="btn btn--primary" href="/api/v1/admin/export/snapshot.json" download>下载 snapshot.json</a>
         </div>
       </div>
     </section>`,
@@ -445,17 +441,18 @@ export const ExportView = defineComponent({
 
 export const SystemView = defineComponent({
   name: "SystemView",
-  components: { Busy },
+  components: { Alert, Busy, PageHead },
   setup() {
     const info = ref(null);
     const loading = ref(true);
+    const error = ref("");
     const password = ref({ current_password: "", new_password: "", confirm: "" });
     const passwordError = ref("");
     const busy = ref(false);
 
     async function load() {
       loading.value = true;
-      const payload = await run(() => api.get("/admin/system"));
+      const payload = await tryLoad(error, () => api.get("/admin/system"));
       if (payload) info.value = payload;
       loading.value = false;
     }
@@ -495,24 +492,23 @@ export const SystemView = defineComponent({
     }
 
     onMounted(load);
-    return { info, loading, load, password, passwordError, busy, changePassword, cleanup,
-      bytes, duration, number, dateTime, can, notify };
+    return { info, loading, error, load, password, passwordError, busy, changePassword, cleanup,
+      bytes, duration, number, dateTime, can };
   },
   template: `
     <section class="admin__section stack">
-      <div class="page-head">
-        <div>
-          <h1>系统状态</h1>
-          <p class="muted">运行参数、数据库体量与安全策略。</p>
-        </div>
-        <div class="row">
-          <a class="btn" href="/healthz" target="_blank" rel="noopener">健康检查</a>
-          <button class="btn" type="button" @click="load">刷新</button>
-          <button v-if="can('dangerous')" class="btn" type="button" @click="cleanup">清理过期会话</button>
-        </div>
-      </div>
+      <PageHead title="系统状态" subtitle="运行参数、数据库体量与安全策略。">
+        <a class="btn" href="/healthz" target="_blank" rel="noopener">健康检查</a>
+        <button class="btn" type="button" @click="load">刷新</button>
+        <button v-if="can('dangerous')" class="btn" type="button" @click="cleanup">清理过期会话</button>
+      </PageHead>
 
       <Busy v-if="loading" text="正在读取系统信息…"/>
+      <Alert v-else-if="error" tone="danger" :text="error">
+        <template #actions>
+          <button class="btn btn--sm" type="button" @click="load">重试</button>
+        </template>
+      </Alert>
       <div v-else-if="info" class="grid-2">
         <div class="card stack-tight">
           <p class="panel-title">运行环境</p>
@@ -528,9 +524,9 @@ export const SystemView = defineComponent({
         <div class="card stack-tight">
           <p class="panel-title">安全策略</p>
           <ul class="muted">
-            <li>会话有效期 {{ info.session_ttl_minutes }} 分钟，密码 pbkdf2_sha256 加盐存储</li>
-            <li>登录限流：{{ info.rate_limits.login_per_window }} 次 / {{ info.rate_limits.login_window_seconds }} 秒</li>
-            <li>Roll 限流：{{ info.rate_limits.roll_per_window }} 次 / {{ info.rate_limits.roll_window_seconds }} 秒</li>
+            <li>会话有效期 {{ number(info.session_ttl_minutes) }} 分钟，密码 pbkdf2_sha256 加盐存储</li>
+            <li>登录限流：{{ number(info.rate_limits.login_per_window) }} 次 / {{ number(info.rate_limits.login_window_seconds) }} 秒</li>
+            <li>Roll 限流：{{ number(info.rate_limits.roll_per_window) }} 次 / {{ number(info.rate_limits.roll_window_seconds) }} 秒</li>
             <li>写操作要求 CSRF 双重提交，Cookie 为 HttpOnly + SameSite</li>
           </ul>
         </div>
@@ -556,7 +552,7 @@ export const SystemView = defineComponent({
             <span class="field__label">确认新密码</span>
             <input id="sy-confirm" class="input" type="password" v-model="password.confirm" autocomplete="new-password" minlength="10">
           </label>
-          <p v-if="passwordError" class="field__error" role="alert">{{ passwordError }}</p>
+          <Alert v-if="passwordError" tone="danger" :text="passwordError"/>
           <button class="btn btn--primary" type="button" :disabled="busy" @click="changePassword">更新密码</button>
           <p class="faint text-xs">修改成功后其他设备的会话会被撤销。</p>
         </div>

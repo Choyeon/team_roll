@@ -109,7 +109,9 @@ def list_page(
         filters.append(or_(Activity.name.like(like), Activity.description.like(like), Activity.id == q))
     if status is not None:
         filters.append(Activity.status == status)
-    if only_public:
+    # 前台默认不出已结束的活动，但明确按状态筛选时要能翻出来，
+    # 否则列表页的“已结束”标签页永远是空的。
+    if only_public and status is None:
         filters.append(Activity.status != ActivityStatus.ENDED)
 
     total = db.execute(select(func.count(Activity.id)).where(*filters)).scalar_one()
